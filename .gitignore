@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+mobile/node_modules/
+backend/.venv/
+.venv/
+
+# env files
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Expo
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts
+
+# OS files
+.DS_Store
+Thumbs.db
