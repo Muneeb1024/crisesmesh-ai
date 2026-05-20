@@ -19,6 +19,7 @@ import GovernmentHomeScreen from '../screens/GovernmentHomeScreen';
 import GovernmentIncidentScreen from '../screens/GovernmentIncidentScreen';
 // Day 3
 import AgentTracePanelScreen from '../screens/AgentTracePanelScreen';
+import SignalFusionScreen from '../screens/SignalFusionScreen';
 // Day 4
 import ResourceAllocationScreen from '../screens/ResourceAllocationScreen';
 import RedZoneMapScreen from '../screens/RedZoneMapScreen';
@@ -134,6 +135,11 @@ export default function RootNavigator() {
         <Stack.Screen
           name="AgentTracePanel"
           component={AgentTracePanelScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SignalFusion"
+          component={SignalFusionScreen}
           options={{ headerShown: false }}
         />
 

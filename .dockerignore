@@ -1,0 +1,32 @@
+# Node
+**/node_modules
+**/dist
+**/.expo
+
+# Python
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+
+# Version control
+.git
+.gitignore
+
+# Environment and secrets
+.env
+.env.production
+backend/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Evidence and brain logs
+antigravity-evidence
+.system_generated
+.agents
+*.log

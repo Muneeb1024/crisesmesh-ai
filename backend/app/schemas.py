@@ -128,3 +128,16 @@ class DemoResetResponse(BaseModel):
     status: str = "reset"
     message: str = "All demo data cleared"
     timestamp: datetime
+
+
+# ──────────── Shelters ────────────
+
+class ShelterResponse(BaseModel):
+    id: str
+    name: str
+    status: str  # "Available" or "Closed"
+    capacity: int
+    occupancy: int
+    lat: float
+    lng: float
+

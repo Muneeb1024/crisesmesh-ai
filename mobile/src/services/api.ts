@@ -146,6 +146,57 @@ export async function getIncident(incidentId: string): Promise<IncidentResponse 
   return data;
 }
 
+export async function triggerEvacuation(incidentId: string): Promise<{ success: boolean; message?: string }> {
+  const { data } = await apiFetch<{ success: boolean; message: string }>(
+    `${API_V1}/government/incidents/${incidentId}/evacuate`,
+    { method: 'POST' }
+  );
+  return { success: !!data?.success, message: data?.message };
+}
+
+// ──────────── Shelters ────────────
+
+export interface ShelterResponse {
+  id: string;
+  name: string;
+  status: 'Available' | 'Closed';
+  capacity: number;
+  occupancy: number;
+  lat: number;
+  lng: number;
+}
+
+export async function fetchShelters(): Promise<ShelterResponse[]> {
+  const { data } = await apiFetch<ShelterResponse[]>(`${API_V1}/resources/shelters`);
+  return data || [];
+}
+
+export async function toggleShelter(shelterId: string): Promise<boolean> {
+  const { data } = await apiFetch<{ success: boolean }>(`${API_V1}/resources/shelters/${shelterId}/toggle`, {
+    method: 'POST',
+  });
+  return !!data?.success;
+}
+
+// ──────────── Citizen SOS ────────────
+
+export async function triggerCitizenSos(
+  lat: number,
+  lng: number,
+  name: string,
+  phone: string
+): Promise<{ success: boolean; message?: string; incident_id?: string }> {
+  const { data } = await apiFetch<{ success: boolean; message: string; incident_id: string }>(
+    `${API_V1}/citizen/sos`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ lat, lng, citizen_name: name, phone }),
+    }
+  );
+  return { success: !!data?.success, message: data?.message, incident_id: data?.incident_id };
+}
+
+
 // ──────────── Demo ────────────
 
 export async function resetDemo(): Promise<boolean> {

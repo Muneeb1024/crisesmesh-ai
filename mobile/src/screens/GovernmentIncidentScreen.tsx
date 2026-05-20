@@ -24,7 +24,7 @@ const mockIncident = {
   reported_at: '11:14 AM',
 };
 
-// 7 signals — core of the multi-agent architecture
+// 8 signals — core of the multi-agent architecture
 const signals = [
   { source: 'Citizen Report', status: '✅', detail: 'Flooding confirmed by 3 citizens', weight: '20%' },
   { source: 'Weather/Rainfall', status: '✅', detail: 'Heavy rainfall — 45mm/hr', weight: '18%' },
@@ -33,6 +33,7 @@ const signals = [
   { source: 'Water-Level Sensor', status: '✅', detail: 'Level 2.3m — above threshold', weight: '15%' },
   { source: 'Emergency Calls', status: '✅', detail: 'Frequency spike: +340%', weight: '10%' },
   { source: 'Historical Data', status: '✅', detail: 'Known flood-prone zone', weight: '10%' },
+  { source: 'Satellite SOS Ingestion', status: '✅', detail: 'Priority satellite SOS trigger verified', weight: '10%' },
 ];
 
 const agents = [
@@ -112,7 +113,7 @@ export default function GovernmentIncidentScreen() {
           <View style={s.confidenceTrack}>
             <View style={[s.confidenceFill, { width: `${i.confidence}%` }]} />
           </View>
-          <Text style={s.confidenceHint}>Based on 7-signal fusion analysis</Text>
+          <Text style={s.confidenceHint}>Based on 8-signal fusion analysis</Text>
         </View>
 
         {/* Metrics grid */}
@@ -126,7 +127,7 @@ export default function GovernmentIncidentScreen() {
         </View>
 
         {/* Signal summary */}
-        <Text style={s.sectionTitle}>📡 7-Signal Fusion Summary</Text>
+        <Text style={s.sectionTitle}>📡 8-Signal Fusion Summary</Text>
         <Text style={s.sectionHint}>Each signal contributes weighted confidence to the final score</Text>
         {signals.map((sig, idx) => (
           <React.Fragment key={`signal-${idx}`}>

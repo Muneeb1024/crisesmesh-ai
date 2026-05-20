@@ -11,7 +11,7 @@ class AgentSettings(BaseSettings):
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "mock_key")
     
     # Model configuration
-    default_model: str = "gemini-1.5-flash"
+    default_model: str = "gemini-flash-latest"
     
     # Trace configuration
     store_traces_in_db: bool = False

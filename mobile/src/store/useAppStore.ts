@@ -19,6 +19,9 @@ interface AppState {
   resources: Resource[];
   agentTraces: AgentTrace[];
 
+  // Global Language Selection
+  lang: 'en' | 'ur';
+
   // Actions
   setRole: (role: 'citizen' | 'government' | null) => void;
   setCitizenProfile: (profile: CitizenProfile) => void;
@@ -29,6 +32,7 @@ interface AppState {
   setResources: (resources: Resource[]) => void;
   setAgentTraces: (traces: AgentTrace[]) => void;
   setCitizenAlerts: (alerts: Alert[]) => void;
+  setLang: (lang: 'en' | 'ur') => void;
   reset: () => void;
 }
 
@@ -41,6 +45,7 @@ const initialState = {
   incidents: [] as Incident[],
   resources: [] as Resource[],
   agentTraces: [] as AgentTrace[],
+  lang: 'en' as 'en' | 'ur',
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -72,5 +77,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   setCitizenAlerts: (alerts) => set({ citizenAlerts: alerts }),
 
+  setLang: (lang) => set({ lang }),
+
   reset: () => set(initialState),
 }));
+

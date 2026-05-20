@@ -1,0 +1,23 @@
+# Task List: Citizen Portal Full Screen Upgrades (Version 5)
+
+- [x] Enhance global Zustand store with synchronized language preference
+  - [x] Modify [useAppStore.ts](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/store/useAppStore.ts)
+  - [x] Connect [CitizenOnboardingScreen.tsx](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/screens/CitizenOnboardingScreen.tsx) to global store
+  - [x] Connect [CitizenHomeScreen.tsx](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/screens/CitizenHomeScreen.tsx) to global store
+- [x] Upgrade [CitizenReportScreen.tsx](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/screens/CitizenReportScreen.tsx)
+  - [x] Add English/Urdu translation dictionary and pills switcher in header
+  - [x] Clean up background/cards styling to fit light-emerald layout
+  - [x] Create step-by-step progress tracking indicator on success screen
+- [x] Upgrade [CitizenAlertsScreen.tsx](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/screens/CitizenAlertsScreen.tsx)
+  - [x] Style cards with light-emerald glassmorphism parameters
+  - [x] Connect alerts toggle to global language state
+- [x] Upgrade [CitizenAlertLiveScreen.tsx](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/screens/CitizenAlertLiveScreen.tsx)
+  - [x] Overhaul dark backdrop to friendly light mode theme
+  - [x] Add dynamic voice warnings in English & Roman Urdu
+  - [x] Localize labels, dismissed states, empty cards, and buttons
+- [x] Upgrade [CitizenMapScreen.tsx](file:///e:/WORKSPACE/AI-SEEKHO-ANTIGRAVITY-HACKATHON/crisesmesh-ai/mobile/src/screens/CitizenMapScreen.tsx)
+  - [x] Integrate language switcher in map HUD and advisories block
+  - [x] Apply glassmorphism styling to proximity HUD card
+  - [x] Ensure red zone intrusion warning triggers bilingual speech
+- [x] Verify compilation safety (`npx tsc --noEmit`)
+- [x] Document changes in `walkthrough.md`

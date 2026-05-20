@@ -1,5 +1,5 @@
 /**
- * CrisesMesh AI — Citizen Alert Live Screen (Task 4.4 + 4.5)
+ * CrisesMesh AI — Citizen Alert Live Screen
  * Citizen receives approved alert with:
  * - Siren animation
  * - Voice warning (TTS via expo-speech)
@@ -11,18 +11,68 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   StatusBar, Animated, Easing,
 } from 'react-native';
-import { Colors, Typography, Spacing } from '../constants/theme';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { API_BASE_URL } from '../services/api';
+import { useAppStore } from '../store/useAppStore';
 
 // Try to import expo-speech (optional)
 let Speech: any = null;
 try { Speech = require('expo-speech'); } catch { Speech = null; }
 
+const LOCALIZATION = {
+  en: {
+    back: '← Back',
+    title: '🔔 Alerts',
+    redZoneAhead: 'RED ZONE AHEAD',
+    avoidUnderpass: 'Avoid G-10 Underpass • Critical Flooding',
+    playEn: 'Play Warning (EN)',
+    playUr: 'Play Warning (UR)',
+    stopWarning: 'Stop Warning',
+    enLabel: '🇬🇧 English Warning',
+    urLabel: '🇵🇰 Roman Urdu',
+    redZoneActive: 'Red Zone Active',
+    residentsAffected: '~15,000 residents affected',
+    underpassCoords: 'G-10 Underpass, Islamabad • 1.2km radius',
+    dismissAlert: '✓ I Understand — Dismiss Alert',
+    alertDismissed: 'Alert Dismissed',
+    staySafeCheck: 'Stay safe. Check back for updates.',
+    refreshAlerts: 'Refresh Alerts',
+    noActiveAlerts: 'No Active Alerts',
+    noAlertsDetail: 'No emergency alerts in your area.\nGovernment will notify you if a situation develops.',
+    refresh: 'Refresh',
+  },
+  ur: {
+    back: '← واپس',
+    title: '🔔 الرٹس',
+    redZoneAhead: 'خطرناک علاقہ آگے ہے',
+    avoidUnderpass: 'جی-10 انڈر پاس سے پرہیز کریں • شدید سیلاب',
+    playEn: 'وارننگ چلائیں (انگریزی)',
+    playUr: 'وارننگ چلائیں (رومن اردو)',
+    stopWarning: 'وارننگ بند کریں',
+    enLabel: '🇬🇧 انگریزی وارننگ',
+    urLabel: '🇵🇰 رومن اردو وارننگ',
+    redZoneActive: 'خطرناک زون فعال ہے',
+    residentsAffected: 'تقریباً 15,000 شہری متاثر ہیں',
+    underpassCoords: 'جی-10 انڈر پاس، اسلام آباد • 1.2 کلومیٹر رداس',
+    dismissAlert: '✓ میں سمجھ گیا — الرٹ ہٹائیں',
+    alertDismissed: 'الرٹ خارج کر دیا گیا',
+    staySafeCheck: 'محفوظ رہیں۔ اپ ڈیٹس کے لیے دوبارہ چیک کریں۔',
+    refreshAlerts: 'الرٹس اپڈیٹ کریں',
+    noActiveAlerts: 'کوئی فعال الرٹ نہیں ہے',
+    noAlertsDetail: 'آپ کے علاقے میں کوئی ہنگامی الرٹ نہیں ہے۔\nبحران کی صورت میں حکومت آپ کو مطلع کرے گی۔',
+    refresh: 'ریفریش کریں',
+  }
+};
+
 export default function CitizenAlertLiveScreen({ navigation, route }: any) {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [sirenActive, setSirenActive] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [activeSpeechKey, setActiveSpeechKey] = useState<'en' | 'ur' | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const { lang, setLang } = useAppStore();
+  const t = LOCALIZATION[lang];
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
 
@@ -74,20 +124,50 @@ export default function CitizenAlertLiveScreen({ navigation, route }: any) {
     }
   };
 
-  const handleSpeak = (text: string) => {
-    if (!Speech) return;
-    if (speaking) {
-      Speech.stop();
-      setSpeaking(false);
+  const handleSpeak = (text: string, key: 'en' | 'ur') => {
+    if (!Speech) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        if (speaking) {
+          window.speechSynthesis.cancel();
+          if (activeSpeechKey === key) {
+            setSpeaking(false);
+            setActiveSpeechKey(null);
+            return;
+          }
+        }
+        setSpeaking(true);
+        setActiveSpeechKey(key);
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = key === 'ur' ? 'en' : 'en-US'; // Use English voice with romanized Urdu text for maximum web TTS compatibility
+        utterance.rate = 0.9;
+        utterance.onend = () => {
+          setSpeaking(false);
+          setActiveSpeechKey(null);
+        };
+        utterance.onerror = () => {
+          setSpeaking(false);
+          setActiveSpeechKey(null);
+        };
+        window.speechSynthesis.speak(utterance);
+      }
       return;
     }
+    if (speaking) {
+      Speech.stop();
+      if (activeSpeechKey === key) {
+        setSpeaking(false);
+        setActiveSpeechKey(null);
+        return;
+      }
+    }
     setSpeaking(true);
+    setActiveSpeechKey(key);
     Speech.speak(text, {
-      language: 'en',
+      language: key === 'ur' ? 'ur' : 'en',
       pitch: 1.1,
       rate: 0.9,
-      onDone: () => setSpeaking(false),
-      onError: () => setSpeaking(false),
+      onDone: () => { setSpeaking(false); setActiveSpeechKey(null); },
+      onError: () => { setSpeaking(false); setActiveSpeechKey(null); },
     });
   };
 
@@ -95,6 +175,7 @@ export default function CitizenAlertLiveScreen({ navigation, route }: any) {
     if (Speech) Speech.stop();
     setSirenActive(false);
     setSpeaking(false);
+    setActiveSpeechKey(null);
     setDismissed(true);
   };
 
@@ -107,15 +188,31 @@ export default function CitizenAlertLiveScreen({ navigation, route }: any) {
 
   return (
     <Animated.View style={[s.container, { backgroundColor: flashBg as any }]}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.citizenBg} />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.citizenBg} />
 
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Text style={s.backText}>← Back</Text>
+          <Text style={s.backText}>{t.back}</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>🔔 Emergency Alerts</Text>
-        <View style={{ width: 60 }} />
+        <Text style={s.headerTitle}>{t.title}</Text>
+        
+        <View style={s.langToggleContainer}>
+          <TouchableOpacity 
+            onPress={() => setLang('en')} 
+            style={[s.langToggleBtn, lang === 'en' && s.langToggleBtnActive]}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.langToggleText, lang === 'en' && s.langToggleTextActive]}>EN</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setLang('ur')} 
+            style={[s.langToggleBtn, lang === 'ur' && s.langToggleBtnActive]}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.langToggleText, lang === 'ur' && s.langToggleTextActive]}>اردو</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -129,36 +226,36 @@ export default function CitizenAlertLiveScreen({ navigation, route }: any) {
                   <Text style={s.sirenIcon}>🚨</Text>
                 </View>
               </Animated.View>
-              <Text style={s.sirenTitle}>RED ZONE AHEAD</Text>
-              <Text style={s.sirenSub}>Avoid G-10 Underpass • Critical Flooding</Text>
+              <Text style={s.sirenTitle}>{t.redZoneAhead}</Text>
+              <Text style={s.sirenSub}>{t.avoidUnderpass}</Text>
             </View>
 
             {/* Voice Controls */}
             <View style={s.voiceRow}>
               <TouchableOpacity
-                style={[s.voiceBtn, speaking && s.voiceBtnActive]}
-                onPress={() => handleSpeak('Warning! Red Zone ahead. Avoid G-10 Underpass. Critical urban flooding reported. Emergency services have been dispatched. Please stay indoors and avoid this route.')}
+                style={[s.voiceBtn, activeSpeechKey === 'en' && s.voiceBtnActive]}
+                onPress={() => handleSpeak('Warning! Red Zone ahead. Avoid G-10 Underpass. Critical urban flooding reported. Emergency services have been dispatched. Please stay indoors and avoid this route.', 'en')}
               >
-                <Text style={s.voiceBtnIcon}>{speaking ? '⏹' : '🔊'}</Text>
-                <Text style={s.voiceBtnText}>{speaking ? 'Stop Warning' : 'Play Warning (EN)'}</Text>
+                <Text style={s.voiceBtnIcon}>{activeSpeechKey === 'en' ? '⏹' : '🔊'}</Text>
+                <Text style={s.voiceBtnText}>{activeSpeechKey === 'en' ? t.stopWarning : t.playEn}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={s.voiceBtn}
-                onPress={() => handleSpeak('Khatarnak ilaaqa saamne hai. G-10 Underpass se dur rahein. Sailaab ki khabardar. Emergency services bhaij di gayi hain.')}
+                style={[s.voiceBtn, activeSpeechKey === 'ur' && s.voiceBtnActive]}
+                onPress={() => handleSpeak('Khatarnak ilaaqa saamne hai. G-10 Underpass se dur rahein. Sailaab ki khabardar. Emergency services bhaij di gayi hain.', 'ur')}
               >
-                <Text style={s.voiceBtnIcon}>🔊</Text>
-                <Text style={s.voiceBtnText}>Play Warning (UR)</Text>
+                <Text style={s.voiceBtnIcon}>{activeSpeechKey === 'ur' ? '⏹' : '🔊'}</Text>
+                <Text style={s.voiceBtnText}>{activeSpeechKey === 'ur' ? t.stopWarning : t.playUr}</Text>
               </TouchableOpacity>
             </View>
 
             {/* Alert Text Cards */}
             <View style={s.alertCard}>
-              <Text style={s.alertLang}>🇬🇧 English Warning</Text>
+              <Text style={s.alertLang}>{t.enLabel}</Text>
               <Text style={s.alertText}>{liveAlert.english_text || MOCK_ALERT.english_text}</Text>
             </View>
 
-            <View style={[s.alertCard, { borderColor: 'rgba(139,92,246,0.4)' }]}>
-              <Text style={[s.alertLang, { color: '#a78bfa' }]}>🇵🇰 Roman Urdu</Text>
+            <View style={[s.alertCard, { borderColor: 'rgba(217,119,6,0.3)', backgroundColor: '#FFFBEB' }]}>
+              <Text style={[s.alertLang, { color: '#D97706' }]}>{t.urLabel}</Text>
               <Text style={s.alertText}>{liveAlert.roman_urdu_text || MOCK_ALERT.roman_urdu_text}</Text>
             </View>
 
@@ -166,36 +263,33 @@ export default function CitizenAlertLiveScreen({ navigation, route }: any) {
             <View style={s.redZoneBox}>
               <Text style={s.redZoneIcon}>🔴</Text>
               <View style={{ flex: 1 }}>
-                <Text style={s.redZoneTitle}>Red Zone Active</Text>
-                <Text style={s.redZoneSub}>G-10 Underpass, Islamabad • 1.2km radius</Text>
-                <Text style={s.redZoneSub}>~15,000 residents affected</Text>
+                <Text style={s.redZoneTitle}>{t.redZoneActive}</Text>
+                <Text style={s.redZoneSub}>{t.underpassCoords}</Text>
+                <Text style={s.redZoneSub}>{t.residentsAffected}</Text>
               </View>
             </View>
 
             {/* Dismiss */}
-            <TouchableOpacity style={s.dismissBtn} onPress={handleDismiss}>
-              <Text style={s.dismissText}>✓ I Understand — Dismiss Alert</Text>
+            <TouchableOpacity style={s.dismissBtn} onPress={handleDismiss} activeOpacity={0.8}>
+              <Text style={s.dismissText}>{t.dismissAlert}</Text>
             </TouchableOpacity>
           </>
         ) : dismissed ? (
           <View style={s.emptyState}>
             <Text style={s.emptyIcon}>✅</Text>
-            <Text style={s.emptyTitle}>Alert Dismissed</Text>
-            <Text style={s.emptySub}>Stay safe. Check back for updates.</Text>
-            <TouchableOpacity style={s.refreshBtn} onPress={() => { setDismissed(false); fetchAlerts(); }}>
-              <Text style={s.refreshText}>Refresh Alerts</Text>
+            <Text style={s.emptyTitle}>{t.alertDismissed}</Text>
+            <Text style={s.emptySub}>{t.staySafeCheck}</Text>
+            <TouchableOpacity style={s.refreshBtn} onPress={() => { setDismissed(false); fetchAlerts(); }} activeOpacity={0.8}>
+              <Text style={s.refreshText}>{t.refreshAlerts}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={s.emptyState}>
             <Text style={s.emptyIcon}>🟢</Text>
-            <Text style={s.emptyTitle}>No Active Alerts</Text>
-            <Text style={s.emptySub}>
-              No emergency alerts in your area.{'\n'}
-              Government will notify you if a situation develops.
-            </Text>
-            <TouchableOpacity style={s.refreshBtn} onPress={fetchAlerts}>
-              <Text style={s.refreshText}>Refresh</Text>
+            <Text style={s.emptyTitle}>{t.noActiveAlerts}</Text>
+            <Text style={s.emptySub}>{t.noAlertsDetail}</Text>
+            <TouchableOpacity style={s.refreshBtn} onPress={fetchAlerts} activeOpacity={0.8}>
+              <Text style={s.refreshText}>{t.refresh}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -227,60 +321,89 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingTop: 52, paddingBottom: Spacing.md,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,100,100,0.15)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(16,185,129,0.1)',
+    backgroundColor: Colors.white,
   },
-  backBtn: { width: 60 },
-  backText: { color: Colors.govAccent, fontSize: Typography.sizes.sm, fontWeight: '600' },
-  headerTitle: { color: Colors.citizenText, fontSize: Typography.sizes.lg, fontWeight: '700' },
+  backBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: '#F1F5F9',
+  },
+  backText: { color: Colors.citizenText, fontSize: Typography.sizes.sm, fontWeight: '700' },
+  headerTitle: { color: Colors.citizenText, fontSize: Typography.sizes.lg, fontWeight: '800' },
+  langToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: BorderRadius.sm,
+    padding: 2,
+  },
+  langToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm - 1,
+  },
+  langToggleBtnActive: {
+    backgroundColor: Colors.white,
+    ...Shadows.sm,
+  },
+  langToggleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.citizenTextSecondary,
+  },
+  langToggleTextActive: {
+    color: Colors.primary,
+  },
   scroll: { padding: Spacing.md },
   sirenSection: { alignItems: 'center', paddingVertical: 32 },
   sirenRing: {
     width: 120, height: 120, borderRadius: 60,
-    backgroundColor: 'rgba(239,68,68,0.15)', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(239,68,68,0.4)',
+    backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(239,68,68,0.25)',
   },
   sirenInner: {
     width: 88, height: 88, borderRadius: 44,
-    backgroundColor: 'rgba(239,68,68,0.2)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(239,68,68,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   sirenIcon: { fontSize: 48 },
   sirenTitle: { color: '#ef4444', fontSize: 26, fontWeight: '900', letterSpacing: 2, marginTop: 16 },
-  sirenSub: { color: '#fca5a5', fontSize: Typography.sizes.sm, marginTop: 4 },
+  sirenSub: { color: '#64748B', fontSize: Typography.sizes.sm, marginTop: 4, fontWeight: '600' },
   voiceRow: { flexDirection: 'row', gap: 10, marginBottom: Spacing.md },
   voiceBtn: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12,
-    padding: 14, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    flex: 1, backgroundColor: '#F8FAFC', borderRadius: 12,
+    padding: 14, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#E2E8F0',
   },
-  voiceBtnActive: { backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#ef4444' },
+  voiceBtnActive: { backgroundColor: '#ECFDF5', borderColor: '#10B981' },
   voiceBtnIcon: { fontSize: 22 },
   voiceBtnText: { color: Colors.citizenText, fontSize: 11, fontWeight: '600', textAlign: 'center' },
   alertCard: {
-    backgroundColor: 'rgba(239,68,68,0.06)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: '#FEF2F2', borderRadius: 12,
+    borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.15)',
     padding: Spacing.md, marginBottom: Spacing.sm,
   },
-  alertLang: { color: '#f87171', fontSize: Typography.sizes.xs, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 },
-  alertText: { color: Colors.citizenText, fontSize: Typography.sizes.sm, lineHeight: 22 },
+  alertLang: { color: '#EF4444', fontSize: Typography.sizes.xs, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 },
+  alertText: { color: '#7F1D1D', fontSize: Typography.sizes.sm, lineHeight: 22, fontWeight: '500' },
   redZoneBox: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: Spacing.md, marginTop: 4,
+    backgroundColor: '#FEF2F2', borderRadius: 12,
+    borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.15)', padding: Spacing.md, marginTop: 4,
   },
   redZoneIcon: { fontSize: 32 },
-  redZoneTitle: { color: '#ef4444', fontSize: Typography.sizes.md, fontWeight: '800' },
-  redZoneSub: { color: '#fca5a5', fontSize: Typography.sizes.xs, marginTop: 2 },
+  redZoneTitle: { color: '#DC2626', fontSize: Typography.sizes.md, fontWeight: '800' },
+  redZoneSub: { color: '#7F1D1D', fontSize: Typography.sizes.xs, marginTop: 2, fontWeight: '500' },
   dismissBtn: {
-    backgroundColor: 'rgba(34,197,94,0.15)', borderRadius: 14, padding: 18,
-    alignItems: 'center', marginTop: 20, borderWidth: 1, borderColor: '#22c55e',
+    backgroundColor: '#10B981', borderRadius: 14, padding: 18,
+    alignItems: 'center', marginTop: 20, ...Shadows.md,
   },
-  dismissText: { color: '#22c55e', fontWeight: '700', fontSize: Typography.sizes.md },
+  dismissText: { color: Colors.white, fontWeight: '800', fontSize: Typography.sizes.md },
   emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: Spacing.lg },
   emptyIcon: { fontSize: 72, marginBottom: 16 },
   emptyTitle: { color: Colors.citizenText, fontSize: Typography.sizes.xl, fontWeight: '800', marginBottom: 8 },
-  emptySub: { color: '#94a3b8', fontSize: Typography.sizes.md, textAlign: 'center', lineHeight: 24 },
+  emptySub: { color: '#64748B', fontSize: Typography.sizes.md, textAlign: 'center', lineHeight: 24, fontWeight: '500' },
   refreshBtn: {
-    marginTop: 24, backgroundColor: 'rgba(0,255,210,0.12)', borderRadius: 12,
-    paddingHorizontal: 28, paddingVertical: 12, borderWidth: 1, borderColor: Colors.govAccent,
+    marginTop: 24, backgroundColor: '#ECFDF5', borderRadius: 12,
+    paddingHorizontal: 28, paddingVertical: 12, borderWidth: 1.5, borderColor: '#10B981',
   },
-  refreshText: { color: Colors.govAccent, fontWeight: '700', fontSize: Typography.sizes.sm },
+  refreshText: { color: '#059669', fontWeight: '700', fontSize: Typography.sizes.sm },
 });

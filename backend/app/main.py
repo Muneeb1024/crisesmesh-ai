@@ -55,18 +55,26 @@ async def health_check():
     )
 
 
-@app.get("/", tags=["System"])
-async def root():
-    """Root endpoint with API info."""
-    return {
-        "app": settings.app_name,
-        "version": settings.app_version,
-        "docs": "/docs",
-        "health": "/health",
-        "endpoints": {
-            "citizen_reports": "/api/v1/citizen/reports",
-            "government_incidents": "/api/v1/government/incidents",
-            "demo_reset": "/api/v1/demo/reset",
-            "demo_scenario": "/api/v1/demo/start-flood-scenario",
-        },
-    }
+import os
+from fastapi.staticfiles import StaticFiles
+
+static_path = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_path):
+    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
+else:
+    @app.get("/", tags=["System"])
+    async def root():
+        """Root endpoint with API info."""
+        return {
+            "app": settings.app_name,
+            "version": settings.app_version,
+            "docs": "/docs",
+            "health": "/health",
+            "endpoints": {
+                "citizen_reports": "/api/v1/citizen/reports",
+                "government_incidents": "/api/v1/government/incidents",
+                "demo_reset": "/api/v1/demo/reset",
+                "demo_scenario": "/api/v1/demo/start-flood-scenario",
+            },
+        }
+

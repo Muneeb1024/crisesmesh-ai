@@ -6,6 +6,7 @@ GET  /citizen/reports/{report_id} — Get report status
 
 from fastapi import APIRouter, HTTPException
 from typing import List
+from pydantic import BaseModel
 
 from app.schemas import CitizenReportCreate, CitizenReportResponse
 from app.store import store
@@ -43,3 +44,43 @@ async def get_report(report_id: str):
 async def list_reports():
     """List all citizen reports."""
     return store.list_reports()
+
+
+class SosRequest(BaseModel):
+    lat: float
+    lng: float
+    citizen_name: str
+    phone: str
+
+
+@router.post("/sos")
+async def trigger_citizen_sos(payload: SosRequest):
+    from app.schemas import CitizenReportCreate, SeverityLevel, ReportCategory
+    
+    report_data = CitizenReportCreate(
+        citizen_name=payload.citizen_name,
+        phone=payload.phone,
+        category=ReportCategory.URBAN_FLOODING,
+        severity=SeverityLevel.CRITICAL,
+        description="CRITICAL SOS PANIC TRIGGERED: Citizen reported via priority satellite connection.",
+        lat=payload.lat,
+        lng=payload.lng,
+        road_blocked=True
+    )
+    
+    # Store report
+    report = store.create_report(report_data)
+    
+    # Force incident creation
+    incident = store.create_incident_from_report(report)
+    incident.severity = SeverityLevel.CRITICAL
+    incident.confidence = 1.0
+    incident.priority_score = 99
+    
+    return {
+        "success": True,
+        "message": "🔴 SOS RECEIVED: Priority response dispatched.",
+        "incident_id": incident.id,
+        "report_id": report.id
+    }
+

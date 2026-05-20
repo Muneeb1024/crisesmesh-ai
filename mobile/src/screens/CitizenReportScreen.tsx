@@ -13,6 +13,7 @@ import {
   Alert,
   Animated,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,6 +23,34 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants
 import type { RootStackParamList, ReportCategory } from '../constants/types';
 import { useAppStore } from '../store/useAppStore';
 import { submitReport } from '../services/api';
+
+const showAlert = (title: string, message: string, buttons?: any[]) => {
+  if (Platform.OS === 'web') {
+    if (buttons && buttons.length > 0) {
+      // Look for a button with onPress that isn't Cancel
+      const actionBtn = buttons.find((b: any) => b.text && !b.text.toLowerCase().includes('cancel') && !b.text.toLowerCase().includes('stay'));
+      const cancelBtn = buttons.find((b: any) => b.text && (b.text.toLowerCase().includes('cancel') || b.text.toLowerCase().includes('stay')));
+      
+      if (cancelBtn) {
+        // Confirmation dialog
+        const confirmed = window.confirm(`${title}\n\n${message}`);
+        if (confirmed) {
+          if (actionBtn && actionBtn.onPress) actionBtn.onPress();
+        } else {
+          if (cancelBtn.onPress) cancelBtn.onPress();
+        }
+      } else {
+        // Alert with a callback
+        window.alert(`${title}\n\n${message}`);
+        if (buttons[0].onPress) buttons[0].onPress();
+      }
+    } else {
+      window.alert(`${title}\n\n${message}`);
+    }
+  } else {
+    Alert.alert(title, message, buttons);
+  }
+};
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CitizenReport'>;
 
@@ -46,9 +75,75 @@ const severityLevels = [
   { value: 'high', label: 'Severe', icon: '🔴', desc: 'Waist-deep, road blocked' },
 ];
 
+const LOCALIZATION = {
+  en: {
+    back: '← Back',
+    title: 'Report Incident',
+    subtitle: 'Submit active flooding data, blockages, or rescue requests instantly.',
+    crisisType: 'Crisis Type *',
+    severityLevel: 'Severity Level *',
+    incidentDetails: 'Incident Details *',
+    hintText: 'Type below or record using the smart AI Voice recorder',
+    quickPhrases: '💡 QUICK PHRASE TEMPLATES (Tap to append)',
+    voiceRecord: '🎙️ OR RECORD WITH AI VOICE',
+    tapRecord: 'Tap to Record',
+    recording: 'Recording... Tap to Stop',
+    transcribing: 'CrisesMesh AI Transcribing...',
+    photoEvidence: 'Photo Evidence',
+    camera: 'Camera',
+    gallery: 'Gallery',
+    liveLocation: 'Live Location *',
+    pingingSatellites: 'Pinging Satellites...',
+    syncGps: 'Sync Live GPS 🛰️',
+    correctMap: 'Correct on Map',
+    submitBtn: 'Submit Report 🚨',
+    submittingBtn: 'Submitting...',
+    successTitle: 'Report Submitted!',
+    successSubtitle: 'Your emergency report has been received and is being processed by CrisesMesh AI.',
+    nextStepsTitle: '🤖 What Happens Next',
+    nextStep1: 'Signal Fusion Agent verifies your report',
+    nextStep2: 'Classification Agent categorizes severity',
+    nextStep3: 'Alert sent to NDMA / local authorities',
+    statusLabel: 'Status',
+    backHome: '← Back to Home',
+  },
+  ur: {
+    back: '← واپس',
+    title: 'رپورٹ جمع کریں',
+    subtitle: 'سیلاب کا ڈیٹا، رکاوٹیں، یا ہنگامی امداد کی درخواستیں جمع کرائیں۔',
+    crisisType: 'بحران کی قسم *',
+    severityLevel: 'شدت کی سطح *',
+    incidentDetails: 'تفصیلات *',
+    hintText: 'نیچے لکھیں یا سمارٹ آواز ریکارڈر کا استعمال کریں',
+    quickPhrases: '💡 فوری الفاظ کے سانچے (شامل کرنے کے لیے دبائیں)',
+    voiceRecord: '🎙️ یا بول کر لکھیں',
+    tapRecord: 'ریکارڈ کرنے کے لیے بولیں',
+    recording: 'ریکارڈنگ ہو رہی ہے... بند کرنے کے لیے دبائیں',
+    transcribing: 'کرائسس میش اے آئی لکھ رہا ہے...',
+    photoEvidence: 'تصویری ثبوت',
+    camera: 'کیمرہ',
+    gallery: 'گیلری',
+    liveLocation: 'موجودہ جگہ *',
+    pingingSatellites: 'سیٹلائٹ سے رابطہ ہو رہا ہے...',
+    syncGps: 'موجودہ جی پی ایس اپڈیٹ کریں 🛰️',
+    correctMap: 'نقشے پر درست کریں',
+    submitBtn: 'رپورٹ جمع کریں 🚨',
+    submittingBtn: 'جمع ہو رہی ہے...',
+    successTitle: 'رپورٹ کامیابی سے جمع ہو گئی!',
+    successSubtitle: 'آپ کی ہنگامی رپورٹ موصول ہو گئی ہے اور کرائسس میش اے آئی اس پر کارروائی کر رہا ہے۔',
+    nextStepsTitle: '🤖 آگے کیا ہوگا',
+    nextStep1: 'سگنل فیوژن ایجنٹ رپورٹ کی تصدیق کرتا ہے',
+    nextStep2: 'درجہ بندی ایجنٹ شدت کا تعین کرتا ہے',
+    nextStep3: 'این ڈی ایم اے یا مقامی حکام کو الرٹ بھیجا جاتا ہے',
+    statusLabel: 'حیثیت',
+    backHome: '← ہوم پیج پر واپس جائیں',
+  }
+};
+
 export default function CitizenReportScreen() {
   const navigation = useNavigation<NavProp>();
-  const { citizenProfile, addCitizenReport } = useAppStore();
+  const { citizenProfile, addCitizenReport, lang, setLang } = useAppStore();
+  const t = LOCALIZATION[lang];
 
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [severity, setSeverity] = useState<string | null>(null);
@@ -161,91 +256,121 @@ export default function CitizenReportScreen() {
     }
   };
 
-  // Context-specific situational quick phrases in Roman Urdu
+  // Context-specific situational quick phrases in English or Urdu
   const getQuickPhrases = () => {
+    const isUrdu = lang === 'ur';
     switch (category) {
       case 'Fire Incident':
-        return [
-          { text: 'Aag out of control hai', label: '🔥 Out of Control' },
-          { text: 'Log building mein phansay hain', label: '👥 People Trapped' },
-          { text: 'Fire brigade fauran bhejein', label: '🚒 Send Fire Brigade' },
+        return isUrdu ? [
+          { text: 'آگ قابو سے باہر ہے', label: '🔥 بے قابو آگ' },
+          { text: 'لوگ عمارت میں پھنسے ہوئے ہیں', label: '👥 پھنسے ہوئے لوگ' },
+          { text: 'فائر بریگیڈ فوری بھیجیں!', label: '🚒 فائر بریگیڈ بھیجیں' },
+        ] : [
+          { text: 'The fire is completely out of control.', label: '🔥 Out of Control' },
+          { text: 'People are trapped inside the building.', label: '👥 People Trapped' },
+          { text: 'Please dispatch the fire brigade immediately.', label: '🚒 Send Fire Brigade' },
         ];
       case 'Medical Emergency':
-        return [
-          { text: 'Rider accident mein zakhmi hai', label: '🏍️ Accident Injury' },
-          { text: 'Dil ka daura / Saans ka masla', label: '🫀 Chest Pain / Breathing' },
-          { text: 'Ambulance fauran bhejein', label: '🚑 Need Ambulance' },
+        return isUrdu ? [
+          { text: 'حادثے میں سوار شدید زخمی ہے', label: '🏍️ سوار زخمی ہے' },
+          { text: 'دل کا دورہ یا سانس کا شدید مسئلہ ہے', label: '🫀 دل / سانس کا مسئلہ' },
+          { text: 'ایمبولینس فوری روانہ کریں!', label: '🚑 ایمبولینس کی ضرورت' },
+        ] : [
+          { text: 'The rider is severely injured in the accident.', label: '🏍️ Accident Injury' },
+          { text: 'Chest pain or severe breathing difficulty reported.', label: '🫀 Chest Pain / Breathing' },
+          { text: 'Please send an ambulance immediately.', label: '🚑 Need Ambulance' },
         ];
       case 'Urban Flooding':
       case 'Water Logging':
       case 'Drain Overflow':
-        return [
-          { text: 'Gharon mein pani daakhil ho gaya', label: '🌊 Flood in Homes' },
-          { text: 'Road block, gariyan phansi hain', label: '🚗 Cars Trapped' },
-          { text: 'Nala overflow ho raha hai', label: '🕳️ Drain Overflowing' },
+        return isUrdu ? [
+          { text: 'گھروں میں سیلابی پانی داخل ہو گیا ہے', label: '🌊 گھروں میں پانی' },
+          { text: 'سڑک بند ہے اور گاڑیاں پھنسی ہوئی ہیں', label: '🚗 گاڑیاں پھنس گئیں' },
+          { text: 'نالہ اوور فلو ہو رہا ہے', label: '🕳️ نالے کا اوور فلو' },
+        ] : [
+          { text: 'Floodwater has entered the houses.', label: '🌊 Flood in Homes' },
+          { text: 'Road is blocked and cars are stranded.', label: '🚗 Cars Stranded' },
+          { text: 'The main drainage is overflowing.', label: '🕳️ Drain Overflowing' },
         ];
       case 'Earthquake Damage':
       case 'Infrastructure Damage':
-        return [
-          { text: 'Deewar/Chhat gir gayi hai', label: '🏚️ Wall collapsed' },
-          { text: 'Dhararein aur cracks boht baray hain', label: '🏗️ Large Cracks' },
-          { text: 'Rasta malba girne se band hai', label: '🚧 Blocked by Debris' },
+        return isUrdu ? [
+          { text: 'دیوار یا چھت گر گئی ہے', label: '🏚️ دیوار گر گئی' },
+          { text: 'عمارت میں بہت بڑی دراڑیں پڑ چکی ہیں', label: '🏗️ بڑی دراڑیں' },
+          { text: 'ملبہ گرنے سے راستہ مکمل بند ہے', label: '🚧 ملبے سے بلاک' },
+        ] : [
+          { text: 'A wall or ceiling has collapsed.', label: '🏚️ Wall collapsed' },
+          { text: 'There are major cracks in the structure.', label: '🏗️ Large Cracks' },
+          { text: 'The road is blocked by fallen debris.', label: '🚧 Blocked by Debris' },
         ];
       case 'Road Blockage':
       case 'Landslide':
-        return [
-          { text: 'Landy slide ki waja se road block hai', label: '⛰️ Landslide Block' },
-          { text: 'Darakht girnay se rasta band hai', label: '🌳 Fallen Tree' },
-          { text: 'Traffic mukammal jaam hai', label: '🚦 Gridlock Traffic' },
+        return isUrdu ? [
+          { text: 'لینڈ سلائیڈ کی وجہ سے راستہ بند ہے', label: '⛰️ لینڈ سلائیڈ بلاک' },
+          { text: 'درخت گرنے سے سڑک بلاک ہو گئی ہے', label: '🌳 گرا ہوا درخت' },
+          { text: 'ٹریفک مکمل طور پر جام ہو چکا ہے', label: '🚦 شدید ٹریفک جام' },
+        ] : [
+          { text: 'The road is blocked due to a landslide.', label: '⛰️ Landslide Block' },
+          { text: 'A fallen tree is blocking the path.', label: '🌳 Fallen Tree' },
+          { text: 'Traffic is completely gridlocked.', label: '🚦 Gridlock Traffic' },
         ];
       case 'Gas Leak':
-        return [
-          { text: 'Gas leak ki shadeed boo aa rahi hai', label: '💨 Strong Gas Smell' },
-          { text: 'Blast hone ka khadsha hai', label: '⚠️ Explosion Risk' },
-          { text: 'Logon ko saans lene mein masla hai', label: '🤢 Suffocation Hazard' },
+        return isUrdu ? [
+          { text: 'گیس لیک کی شدید بو آ رہی ہے', label: '💨 گیس کی شدید بو' },
+          { text: 'دھماکے کا شدید خطرہ ہے', label: '⚠️ دھماکے کا خطرہ' },
+          { text: 'لوگوں کو سانس لینے میں دشواری ہو رہی ہے', label: '🤢 دم گھٹنے کا خطرہ' },
+        ] : [
+          { text: 'There is a strong smell of gas leakage.', label: '💨 Strong Gas Smell' },
+          { text: 'There is an immediate risk of explosion.', label: '⚠️ Explosion Risk' },
+          { text: 'People are experiencing difficulties breathing.', label: '🤢 Suffocation Hazard' },
         ];
       default:
-        return [
-          { text: 'Emergency help chahye', label: '🚨 Immediate Help' },
-          { text: 'Rasta mukammal band hai', label: '🚧 Blocked Road' },
-          { text: 'Fauran assistance bhejein', label: '⚡ Quick Response' },
+        return isUrdu ? [
+          { text: 'ہنگامی مدد کی ضرورت ہے', label: '🚨 فوری مدد' },
+          { text: 'راستہ مکمل طور پر بند ہے', label: '🚧 بند سڑک' },
+          { text: 'فوری مدد کے لیے ٹیم بھیجیں', label: '⚡ فوری کارروائی' },
+        ] : [
+          { text: 'Immediate emergency assistance is required.', label: '🚨 Immediate Help' },
+          { text: 'The route is completely blocked.', label: '🚧 Blocked Road' },
+          { text: 'Please dispatch assistance response teams.', label: '⚡ Quick Response' },
         ];
     }
   };
 
   // Context-aware dynamic severity descriptions in English and Roman Urdu for citizens
   const getDynamicSeverityLevels = () => {
+    const isUrdu = lang === 'ur';
     switch (category) {
       case 'Fire Incident':
         return [
-          { value: 'low', label: 'Minor / معمولی', icon: '🟡', desc: 'Small fire under control\n(معمولی آگ، قابو میں ہے)' },
-          { value: 'medium', label: 'Moderate / درمیانہ', icon: '🟠', desc: 'Large flame spreading\n(درمیانی آگ، پھیل رہی ہے)' },
-          { value: 'high', label: 'Severe / شدید', icon: '🔴', desc: 'Out of control, traps present\n(شدید آگ، لوگ پھنسے ہیں)' },
+          { value: 'low', label: isUrdu ? 'معمولی' : 'Minor', icon: '🟡', desc: isUrdu ? 'معمولی آگ، قابو میں ہے' : 'Small fire under control' },
+          { value: 'medium', label: isUrdu ? 'درمیانہ' : 'Moderate', icon: '🟠', desc: isUrdu ? 'درمیانی آگ، پھیل رہی ہے' : 'Large flame spreading' },
+          { value: 'high', label: isUrdu ? 'شدید' : 'Severe', icon: '🔴', desc: isUrdu ? 'شدید آگ، لوگ پھنسے ہیں' : 'Out of control, traps present' },
         ];
       case 'Medical Emergency':
         return [
-          { value: 'low', label: 'Stable / معمولی', icon: '🟡', desc: 'Minor injury, conscious\n(معمولی چوٹ، ہوش میں ہے)' },
-          { value: 'medium', label: 'Moderate / درمیانہ', icon: '🟠', desc: 'Fracture or deep bleeding\n(فریکچر یا گہرا زخم ہے)' },
-          { value: 'high', label: 'Critical / نازک', icon: '🔴', desc: 'Unconscious or heavy blood loss\n(بے ہوش ہے، جان خطرے میں)' },
+          { value: 'low', label: isUrdu ? 'معمولی' : 'Stable', icon: '🟡', desc: isUrdu ? 'معمولی چوٹ، ہوش میں ہے' : 'Minor injury, conscious' },
+          { value: 'medium', label: isUrdu ? 'درمیانہ' : 'Moderate', icon: '🟠', desc: isUrdu ? 'فریکچر یا گہرا زخم ہے' : 'Fracture or deep bleeding' },
+          { value: 'high', label: isUrdu ? 'نازک' : 'Critical', icon: '🔴', desc: isUrdu ? 'بے ہوش ہے، جان خطرے میں' : 'Unconscious or heavy blood loss' },
         ];
       case 'Earthquake Damage':
       case 'Infrastructure Damage':
         return [
-          { value: 'low', label: 'Minor / معمولی', icon: '🟡', desc: 'Cracks in walls, safe to enter\n(چھوٹے کریکس، جگہ محفوظ ہے)' },
-          { value: 'medium', label: 'Moderate / درمیانہ', icon: '🟠', desc: 'Partial collapse or blockages\n(دیواریں گر گئیں، راستہ بند)' },
-          { value: 'high', label: 'Severe / شدید', icon: '🔴', desc: 'Debris collapsed, traps likely\n(ملبہ گر گیا ہے، لوگ پھنسے ہیں)' },
+          { value: 'low', label: isUrdu ? 'معمولی' : 'Minor', icon: '🟡', desc: isUrdu ? 'چھوٹے کریکس، جگہ محفوظ ہے' : 'Cracks in walls, safe to enter' },
+          { value: 'medium', label: isUrdu ? 'درمیانہ' : 'Moderate', icon: '🟠', desc: isUrdu ? 'دیواریں گر گئیں، راستہ بند' : 'Partial collapse or blockages' },
+          { value: 'high', label: isUrdu ? 'شدید' : 'Severe', icon: '🔴', desc: isUrdu ? 'ملبہ گر گیا ہے، لوگ پھنسے ہیں' : 'Debris collapsed, traps likely' },
         ];
       case 'Gas Leak':
         return [
-          { value: 'low', label: 'Minor / معمولی', icon: '🟡', desc: 'Faint smell in open air area\n(ہلکی بو، کھلی فضا میں ہے)' },
-          { value: 'medium', label: 'Moderate / درمیانہ', icon: '🟠', desc: 'Strong odor, breathing issue\n(تیز گیس کی بو، دم گھٹنا)' },
-          { value: 'high', label: 'Severe / شدید', icon: '🔴', desc: 'Explosion risk, evacuation needed\n(دھماکے کا شدید خطرہ ہے)' },
+          { value: 'low', label: isUrdu ? 'معمولی' : 'Minor', icon: '🟡', desc: isUrdu ? 'ہلکی بو، کھلی فضا میں ہے' : 'Faint smell in open air area' },
+          { value: 'medium', label: isUrdu ? 'درمیانہ' : 'Moderate', icon: '🟠', desc: isUrdu ? 'تیز گیس کی بو، دم گھٹنا' : 'Strong odor, breathing issue' },
+          { value: 'high', label: isUrdu ? 'شدید' : 'Severe', icon: '🔴', desc: isUrdu ? 'دھماکے کا شدید خطرہ ہے' : 'Explosion risk, evacuation needed' },
         ];
       case 'Power Outage':
         return [
-          { value: 'low', label: 'Minor / معمولی', icon: '🟡', desc: 'Voltage drops or flickering\n(وولٹیج میں تعطل یا فلکرنگ)' },
-          { value: 'medium', label: 'Moderate / درمیانہ', icon: '🟠', desc: 'Local blackout in neighborhood\n(پورے محلے کی بجلی بند ہے)' },
-          { value: 'high', label: 'Critical / شدید', icon: '🔴', desc: 'Grid fail, vital facility impacted\n(گرڈ اسٹیشن یا ہسپتال بند)' },
+          { value: 'low', label: isUrdu ? 'معمولی' : 'Minor', icon: '🟡', desc: isUrdu ? 'وولٹیج میں تعطل یا فلکرنگ' : 'Voltage drops or flickering' },
+          { value: 'medium', label: isUrdu ? 'درمیانہ' : 'Moderate', icon: '🟠', desc: isUrdu ? 'پورے محلے کی بجلی بند ہے' : 'Local blackout in neighborhood' },
+          { value: 'high', label: isUrdu ? 'شدید' : 'Critical', icon: '🔴', desc: isUrdu ? 'گرڈ اسٹیشن یا ہسپتال بند' : 'Grid fail, vital facility impacted' },
         ];
       case 'Urban Flooding':
       case 'Water Logging':
@@ -254,9 +379,9 @@ export default function CitizenReportScreen() {
       case 'Landslide':
       default:
         return [
-          { value: 'low', label: 'Minor / معمولی', icon: '🟡', desc: 'Ankle-deep water, passable\n(ٹخنوں تک پانی، گاڑیاں گزر سکتی ہیں)' },
-          { value: 'medium', label: 'Moderate / درمیانہ', icon: '🟠', desc: 'Knee-deep water, traffic slowed\n(گھٹنوں تک پانی، گاڑیاں سست)' },
-          { value: 'high', label: 'Severe / شدید', icon: '🔴', desc: 'Waist-deep water, trapped\n(کمر تک پانی، راستہ بند ہے)' },
+          { value: 'low', label: isUrdu ? 'معمولی' : 'Minor', icon: '🟡', desc: isUrdu ? 'ٹخنوں تک پانی، گاڑیاں گزر سکتی ہیں' : 'Ankle-deep water, passable' },
+          { value: 'medium', label: isUrdu ? 'درمیانہ' : 'Moderate', icon: '🟠', desc: isUrdu ? 'گھٹنوں تک پانی، گاڑیاں سست' : 'Knee-deep water, traffic slowed' },
+          { value: 'high', label: isUrdu ? 'شدید' : 'Severe', icon: '🔴', desc: isUrdu ? 'کمر تک پانی، راستہ بند ہے' : 'Waist-deep water, trapped' },
         ];
     }
   };
@@ -269,7 +394,7 @@ export default function CitizenReportScreen() {
       if (status !== 'granted') {
         setIsGpsLoading(false);
         if (forceAlert) {
-          Alert.alert(
+          showAlert(
             'GPS Permission Denied',
             'To get your live coordinates, enable location service in device settings, or switch back to the simulated engine.',
             [{ text: 'Stay in Mock Mode', onPress: () => setUseSimulatedControls(true) }]
@@ -303,7 +428,7 @@ export default function CitizenReportScreen() {
       });
 
       if (forceAlert) {
-        Alert.alert(
+        showAlert(
           'Live GPS Synchronized 🛰️',
           `Your true physical coordinates have been locked inside the metadata telemetry payload:\n\n📍 Latitude: ${loc.coords.latitude.toFixed(5)}°\n📍 Longitude: ${loc.coords.longitude.toFixed(5)}°\n🏠 Address: ${addressStr}`,
           [{ text: 'Confirm Telemetry' }]
@@ -312,7 +437,7 @@ export default function CitizenReportScreen() {
     } catch (err) {
       console.log('Live GPS Sync Error:', err);
       if (forceAlert) {
-        Alert.alert(
+        showAlert(
           'GPS Sensor Timeout',
           'Physical GPS sensor timed out or unavailable. Switching telemetry framework automatically to Mock fallback.',
           [{ text: 'Use Mock Telemetry', onPress: () => setUseSimulatedControls(true) }]
@@ -333,22 +458,55 @@ export default function CitizenReportScreen() {
         lng: 73.0479,
         address: 'Auto GPS — Islamabad Node'
       });
-      Alert.alert('Simulation Active ⚙️', 'Reverted GPS parameters and camera viewports back to simulation grids.');
+      showAlert('Simulation Active ⚙️', 'Reverted GPS parameters and camera viewports back to simulation grids.');
     }
+  };
+
+  const triggerWebFilePicker = (captureCamera: boolean) => {
+    if (Platform.OS !== 'web') return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (captureCamera) {
+      input.setAttribute('capture', 'environment');
+    }
+
+    input.onchange = (event: any) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+          setPhotoUri(e.target.result);
+          showAlert(
+            captureCamera ? 'Photo Captured 📸' : 'Image Selected 🖼️',
+            captureCamera 
+              ? 'Physical snapshot successfully attached to report.' 
+              : 'Physical photo successfully selected from library.'
+          );
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
   };
 
   const handleCameraOpen = async () => {
     if (!category) {
-      Alert.alert('Selection Required', 'Please select a Crisis Type first.');
+      showAlert('Selection Required', 'Please select a Crisis Type first.');
       return;
     }
 
     if (!useSimulatedControls) {
-      // Trigger actual physical camera
+      if (Platform.OS === 'web') {
+        triggerWebFilePicker(true);
+        return;
+      }
+      // Trigger actual physical camera on native
       try {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
-          Alert.alert("Permission Required", "Camera access is needed to capture physical snapshots. Redirecting to simulated viewfinder.");
+          showAlert("Permission Required", "Camera access is needed to capture physical snapshots. Redirecting to simulated viewfinder.");
           setIsCameraActive(true);
           return;
         }
@@ -361,11 +519,11 @@ export default function CitizenReportScreen() {
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
           setPhotoUri(result.assets[0].uri);
-          Alert.alert('Photo Captured 📸', 'Physical snapshot successfully attached to report payload.');
+          showAlert('Photo Captured 📸', 'Physical snapshot successfully attached to report payload.');
         }
       } catch (err) {
         console.log("Real camera error:", err);
-        Alert.alert("Camera Interface Unavailable", "Physical camera is disabled or unsupported. Opening simulated viewfinder instead.");
+        showAlert("Camera Interface Unavailable", "Physical camera is disabled or unsupported. Opening simulated viewfinder instead.");
         setIsCameraActive(true);
       }
     } else {
@@ -387,16 +545,20 @@ export default function CitizenReportScreen() {
 
   const handleGalleryOpen = async () => {
     if (!category) {
-      Alert.alert('Selection Required', 'Please select a Crisis Type first.');
+      showAlert('Selection Required', 'Please select a Crisis Type first.');
       return;
     }
 
     if (!useSimulatedControls) {
-      // Trigger actual gallery image picker
+      if (Platform.OS === 'web') {
+        triggerWebFilePicker(false);
+        return;
+      }
+      // Trigger actual gallery image picker on native
       try {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-          Alert.alert("Permission Required", "Gallery permissions are required to select a photo. Opening simulated gallery drawer.");
+          showAlert("Permission Required", "Gallery permissions are required to select a photo. Opening simulated gallery drawer.");
           setIsGalleryActive(true);
           return;
         }
@@ -410,11 +572,11 @@ export default function CitizenReportScreen() {
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
           setPhotoUri(result.assets[0].uri);
-          Alert.alert('Image Selected 🖼️', 'Physical photo successfully selected from device library.');
+          showAlert('Image Selected 🖼️', 'Physical photo successfully selected from device library.');
         }
       } catch (err) {
         console.log("Real gallery error:", err);
-        Alert.alert("Gallery Interface Unavailable", "Opening simulated gallery drawer instead.");
+        showAlert("Gallery Interface Unavailable", "Opening simulated gallery drawer instead.");
         setIsGalleryActive(true);
       }
     } else {
@@ -445,26 +607,39 @@ export default function CitizenReportScreen() {
     setTimeout(() => {
       setIsTranscribing(false);
       let trans = '';
+      const isUrdu = lang === 'ur';
       switch (category) {
         case 'Urban Flooding':
         case 'Water Logging':
         case 'Drain Overflow':
-          trans = "G-10 sector underpass mein boht zayada pani jama ho gaya hai, gaariyan doob rahi hain aur rasta bilkul block hai.";
+          trans = isUrdu 
+            ? "انڈر پاس میں شدید سیلابی صورتحال ہے۔ سڑک مکمل طور پر بلاک ہو چکی ہے اور گاڑیاں ڈوب رہی ہیں۔"
+            : "Heavy flooding detected in the underpass. The road is completely blocked and cars are submerged.";
           break;
         case 'Fire Incident':
-          trans = "G-11 area ki 3-story building mein heavy fire lag gayi hai, fire brigade aur rescue service fauran bhejein.";
+          trans = isUrdu
+            ? "عمارت میں شدید آگ لگ گئی ہے۔ فائر بریگیڈ اور ریسکیو سروس فوری بھیجیں۔"
+            : "A building in the area is on fire. Send the fire brigade and rescue services immediately.";
           break;
         case 'Road Blockage':
-          trans = "Kashmir Highway par heavy road block hai, trees aur boulders gire hain. Gaariyan agay nahi ja pa rahi.";
+          trans = isUrdu
+            ? "کشمیر ہائی وے پر درختوں اور ملبے کے گرنے سے شدید سڑک بلاک ہے۔ ٹریفک معطل ہے۔"
+            : "Kashmir Highway is heavily blocked by fallen trees and debris. Traffic is at a complete standstill.";
           break;
         case 'Medical Emergency':
-          trans = "G-9 signal ke paas motor-cycle accident hua hai, rider boht zayada injured hai, ambulance dispatch karein.";
+          trans = isUrdu
+            ? "موٹر سائیکل کا حادثہ ہوا ہے۔ سوار شدید زخمی ہے، ایمبولینس فوری روانہ کریں۔"
+            : "Motorcycle accident near the junction. The rider is severely injured and needs an ambulance immediately.";
           break;
         case 'Earthquake Damage':
-          trans = "Zalzale ke jhatkon se boundary wall gir gayi hai aur ghar ke front side par cracks hain.";
+          trans = isUrdu
+            ? "زلزلے کے جھٹکوں کی وجہ سے دیوار گر گئی ہے اور عمارت میں دراڑیں آ گئی ہیں۔"
+            : "A boundary wall has collapsed due to earthquake tremors, and there are major structural cracks.";
           break;
         default:
-          trans = `${category} emergency incident pesh aya hai, rescue service fauran bulwayein. Location verified hai.`;
+          trans = isUrdu
+            ? `${category} کے حوالے سے ہنگامی صورتحال پیش آئی ہے۔ ریسکیو سروس فوری بھیجی جائے۔`
+            : `${category} emergency incident reported. Please dispatch emergency response immediately.`;
       }
 
       // Beautiful character-by-character typing effect!
@@ -495,15 +670,15 @@ export default function CitizenReportScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!category) {
-      Alert.alert('Required', 'Please select a category');
+      showAlert('Required', 'Please select a category');
       return;
     }
     if (!severity) {
-      Alert.alert('Required', 'Please select a severity level');
+      showAlert('Required', 'Please select a severity level');
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Required', 'Please enter a description');
+      showAlert('Required', 'Please enter a description');
       return;
     }
 
@@ -580,44 +755,94 @@ export default function CitizenReportScreen() {
           <View style={styles.successIconBg}>
             <Text style={styles.successIcon}>✅</Text>
           </View>
-          <Text style={styles.successTitle}>Report Submitted!</Text>
+          <Text style={styles.successTitle}>{t.successTitle}</Text>
           {reportId && (
             <Text style={[styles.successSubtitle, { fontFamily: 'monospace', fontSize: 13, color: Colors.primary, marginBottom: 4 }]}>
               Report ID: {reportId}
             </Text>
           )}
           <Text style={styles.successSubtitle}>
-            Your emergency report has been received and is being processed by CrisesMesh AI.
+            {t.successSubtitle}
           </Text>
 
-          {/* Processing steps */}
+          {/* Interactive Step-by-Step Progress Tracking Bar */}
           <View style={styles.processingCard}>
-            <Text style={styles.processingTitle}>🤖 What Happens Next</Text>
+            <Text style={styles.processingTitle}>{t.nextStepsTitle}</Text>
+            
+            {/* Step 1 */}
             <View style={styles.processingStep}>
-              <View style={styles.processingStepNum}>
-                <Text style={styles.processingStepNumText}>1</Text>
+              <View style={[
+                styles.processingStepNum, 
+                (reportStatus === 'Submitted' || reportStatus === 'Processing' || reportStatus === 'Under Review' || reportStatus === 'Approved' || reportStatus === 'Verified') ? styles.stepNumActive : styles.stepNumInactive
+              ]}>
+                {['Approved', 'Verified', 'Under Review'].includes(reportStatus) ? (
+                  <Text style={styles.processingStepNumText}>✓</Text>
+                ) : (
+                  <Text style={styles.processingStepNumText}>1</Text>
+                )}
               </View>
-              <Text style={styles.processingStepText}>Signal Fusion Agent verifies your report</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.processingStepText, ['Approved', 'Verified', 'Under Review'].includes(reportStatus) && styles.stepTextCompleted]}>
+                  {t.nextStep1}
+                </Text>
+                {['Submitted', 'Processing'].includes(reportStatus) && (
+                  <Text style={styles.stepPulseBadge}>⚡ Active Processing</Text>
+                )}
+              </View>
               <Text style={styles.processingStepTime}>~30s</Text>
             </View>
+
+            {/* Connecting line */}
+            <View style={[styles.stepConnector, ['Approved', 'Verified', 'Under Review'].includes(reportStatus) ? styles.connectorActive : styles.connectorInactive]} />
+
+            {/* Step 2 */}
             <View style={styles.processingStep}>
-              <View style={styles.processingStepNum}>
-                <Text style={styles.processingStepNumText}>2</Text>
+              <View style={[
+                styles.processingStepNum, 
+                (['Under Review', 'Approved', 'Verified'].includes(reportStatus)) ? styles.stepNumActiveReview : styles.stepNumInactive
+              ]}>
+                {['Approved', 'Verified'].includes(reportStatus) ? (
+                  <Text style={styles.processingStepNumText}>✓</Text>
+                ) : (
+                  <Text style={styles.processingStepNumText}>2</Text>
+                )}
               </View>
-              <Text style={styles.processingStepText}>Classification Agent categorizes severity</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.processingStepText, ['Approved', 'Verified'].includes(reportStatus) && styles.stepTextCompleted]}>
+                  {t.nextStep2}
+                </Text>
+                {reportStatus === 'Under Review' && (
+                  <Text style={[styles.stepPulseBadge, { color: '#F59E0B' }]}>⚡ Under AI Classification</Text>
+                )}
+              </View>
               <Text style={styles.processingStepTime}>~1min</Text>
             </View>
+
+            {/* Connecting line */}
+            <View style={[styles.stepConnector, ['Approved', 'Verified'].includes(reportStatus) ? styles.connectorActive : styles.connectorInactive]} />
+
+            {/* Step 3 */}
             <View style={styles.processingStep}>
-              <View style={styles.processingStepNum}>
+              <View style={[
+                styles.processingStepNum, 
+                (['Approved', 'Verified'].includes(reportStatus)) ? styles.stepNumActiveApproved : styles.stepNumInactive
+              ]}>
                 <Text style={styles.processingStepNumText}>3</Text>
               </View>
-              <Text style={styles.processingStepText}>Alert sent to NDMA / local authorities</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.processingStepText, ['Approved', 'Verified'].includes(reportStatus) && styles.stepTextCompleted]}>
+                  {t.nextStep3}
+                </Text>
+                {['Approved', 'Verified'].includes(reportStatus) && (
+                  <Text style={[styles.stepPulseBadge, { color: '#22C55E' }]}>✓ Dispatched</Text>
+                )}
+              </View>
               <Text style={styles.processingStepTime}>~2min</Text>
             </View>
           </View>
 
           <View style={styles.statusCard}>
-            <Text style={styles.statusLabel}>Status</Text>
+            <Text style={styles.statusLabel}>{t.statusLabel}</Text>
             <View style={styles.statusBadge}>
               <View style={[styles.statusDot, reportStatus === 'Under Review' && { backgroundColor: '#F59E0B' }]} />
               <Text style={styles.statusText}>{reportStatus}</Text>
@@ -629,7 +854,7 @@ export default function CitizenReportScreen() {
             onPress={() => navigation.goBack()}
             activeOpacity={0.85}
           >
-            <Text style={styles.backButtonText}>← Back to Home</Text>
+            <Text style={styles.backButtonText}>{t.backHome}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -644,13 +869,38 @@ export default function CitizenReportScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Header */}
+          {/* Header with back button and lang toggle */}
           <View style={styles.header}>
-            <Text style={styles.headerIcon}>🚨</Text>
-            <Text style={styles.headerTitle}>Report Emergency / ایمرجنسی رپورٹ</Text>
-            <Text style={styles.headerSubtitle}>
-              Select the type of crisis and provide details. Your report helps save lives.
-            </Text>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+                <Text style={styles.backBtnText}>{t.back}</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.langToggleContainer}>
+                <TouchableOpacity 
+                  onPress={() => setLang('en')} 
+                  style={[styles.langToggleBtn, lang === 'en' && styles.langToggleBtnActive]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.langToggleText, lang === 'en' && styles.langToggleTextActive]}>EN</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setLang('ur')} 
+                  style={[styles.langToggleBtn, lang === 'ur' && styles.langToggleBtnActive]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.langToggleText, lang === 'ur' && styles.langToggleTextActive]}>اردو</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.headerTitleRow}>
+              <Text style={styles.headerIcon}>🚨</Text>
+              <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                <Text style={styles.headerTitle}>{t.title}</Text>
+                <Text style={styles.headerSubtitle}>{t.subtitle}</Text>
+              </View>
+            </View>
           </View>
 
           {/* Integrated Dual-Mode Hardware/Simulation Dashboard */}
@@ -685,7 +935,7 @@ export default function CitizenReportScreen() {
 
           {/* Category selector — 3-col grid */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Crisis Type / بحران کی قسم *</Text>
+            <Text style={styles.sectionTitle}>{t.crisisType}</Text>
             <View style={styles.categoryGrid}>
               {categories.map((cat) => (
                 <TouchableOpacity
@@ -706,9 +956,8 @@ export default function CitizenReportScreen() {
                     numberOfLines={1}
                     adjustsFontSizeToFit
                   >
-                    {cat.value.split(' ')[0]}
+                    {lang === 'ur' ? cat.urdu : cat.value}
                   </Text>
-                  <Text style={styles.categoryChipUrdu}>{cat.urdu}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -716,7 +965,7 @@ export default function CitizenReportScreen() {
 
           {/* Severity */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Severity Level / شدت کی سطح *</Text>
+            <Text style={styles.sectionTitle}>{t.severityLevel}</Text>
             <View style={styles.severityRow}>
               {getDynamicSeverityLevels().map((s) => (
                 <TouchableOpacity
@@ -741,8 +990,8 @@ export default function CitizenReportScreen() {
 
           {/* Unified Description & Voice Note telemetry container */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Incident Details / تفصیلات *</Text>
-            <Text style={styles.sectionHint}>Type below or record using the smart AI Voice recorder</Text>
+            <Text style={styles.sectionTitle}>{t.incidentDetails}</Text>
+            <Text style={styles.sectionHint}>{t.hintText}</Text>
             <TextInput
               style={styles.textArea}
               placeholder="e.g. G-10 mein aag lag gayi hai, 3 manzila building... ya pani bhar gaya hai..."
@@ -756,7 +1005,7 @@ export default function CitizenReportScreen() {
             {/* Quick Phrase Suggestion Chips */}
             <View style={{ marginTop: Spacing.sm, marginBottom: Spacing.sm }}>
               <Text style={{ fontSize: 9, fontWeight: '800', color: Colors.citizenTextSecondary, marginBottom: 6, letterSpacing: 0.5 }}>
-                💡 QUICK PHRASE TEMPLATES / ایمرجنسی الفاظ (Tap to append)
+                {t.quickPhrases}
               </Text>
               <ScrollView 
                 horizontal 
@@ -792,7 +1041,7 @@ export default function CitizenReportScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: Spacing.md }}>
               <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
               <Text style={{ marginHorizontal: 10, fontSize: 9, fontWeight: '800', color: '#10B981', letterSpacing: 0.8 }}>
-                🎙️ OR RECORD WITH AI VOICE / یا بول کر لکھیں
+                {t.voiceRecord}
               </Text>
               <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
             </View>
@@ -802,7 +1051,7 @@ export default function CitizenReportScreen() {
               <TouchableOpacity style={styles.voiceButtonActive} onPress={handleVoiceRecordStop} activeOpacity={0.85}>
                 <Animated.View style={[styles.voicePulseCircle, { transform: [{ scale: voicePulseAnim }] }]} />
                 <Text style={styles.voiceButtonIconActive}>🔴</Text>
-                <Text style={styles.voiceButtonTextActive}>Recording... Tap to Stop</Text>
+                <Text style={styles.voiceButtonTextActive}>{t.recording}</Text>
                 <Text style={styles.voiceTimerText}>00:{voiceDuration < 10 ? '0' + voiceDuration : voiceDuration}</Text>
                 <View style={styles.waveformContainer}>
                   <View style={[styles.waveBar, { height: 12 + Math.sin(voiceDuration * 2) * 8 }]} />
@@ -815,13 +1064,13 @@ export default function CitizenReportScreen() {
             ) : isTranscribing ? (
               <View style={styles.transcribingCard}>
                 <Text style={styles.transcribingIcon}>🤖</Text>
-                <Text style={styles.transcribingTitle}>CrisesMesh AI Transcribing...</Text>
+                <Text style={styles.transcribingTitle}>{t.transcribing}</Text>
                 <Text style={styles.transcribingSubtitle}>Converting speech telemetry into verified structured text...</Text>
               </View>
             ) : (
               <TouchableOpacity style={styles.voiceButton} onPress={handleVoiceRecordStart} activeOpacity={0.8}>
                 <Text style={styles.voiceButtonIcon}>🎙️</Text>
-                <Text style={styles.voiceButtonText}>Tap to Record / بولیں</Text>
+                <Text style={styles.voiceButtonText}>{t.tapRecord}</Text>
                 <Text style={styles.voiceButtonHint}>Your voice is transcribed directly into the description box above</Text>
               </TouchableOpacity>
             )}
@@ -829,7 +1078,7 @@ export default function CitizenReportScreen() {
 
           {/* Photo Evidence with active preview */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photo Evidence / تصویری ثبوت</Text>
+            <Text style={styles.sectionTitle}>{t.photoEvidence}</Text>
             {photoUri ? (
               <View style={[styles.photoPreviewCard, { borderColor: category === 'Fire Incident' ? '#EF4444' : Colors.primary }]}>
                 <View style={styles.photoPreviewHeader}>
@@ -853,11 +1102,11 @@ export default function CitizenReportScreen() {
               <View style={styles.mediaRow}>
                 <TouchableOpacity style={styles.mediaButton} onPress={handleCameraOpen} activeOpacity={0.8}>
                   <Text style={styles.mediaButtonIcon}>📷</Text>
-                  <Text style={styles.mediaButtonText}>Camera / کیمرہ</Text>
+                  <Text style={styles.mediaButtonText}>{t.camera}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.mediaButton} onPress={handleGalleryOpen} activeOpacity={0.8}>
                   <Text style={styles.mediaButtonIcon}>🖼️</Text>
-                  <Text style={styles.mediaButtonText}>Gallery / گیلری</Text>
+                  <Text style={styles.mediaButtonText}>{t.gallery}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -865,13 +1114,13 @@ export default function CitizenReportScreen() {
 
           {/* Location */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Live Location / موجودہ جگہ *</Text>
+            <Text style={styles.sectionTitle}>{t.liveLocation}</Text>
             <View style={styles.locationCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: Spacing.sm }}>
                 <View style={[styles.locationRow, { flex: 1, marginRight: Spacing.sm }]}>
                   <Text style={styles.locationIcon}>📍</Text>
                   <View style={styles.locationInfo}>
-                    <Text style={styles.locationText}>{isGpsLoading ? 'Pinging Satellites...' : gpsCoords.address}</Text>
+                    <Text style={styles.locationText}>{isGpsLoading ? t.pingingSatellites : gpsCoords.address}</Text>
                     <Text style={styles.locationCoords}>
                       {gpsCoords.lat.toFixed(5)}°N, {gpsCoords.lng.toFixed(5)}°E
                     </Text>
@@ -892,7 +1141,7 @@ export default function CitizenReportScreen() {
                 disabled={isGpsLoading}
               >
                 <Text style={[styles.locationEditText, !useSimulatedControls && { color: '#10B981' }]}>
-                  {isGpsLoading ? 'Syncing...' : useSimulatedControls ? 'Correct on Map' : 'Sync Live GPS 🛰️'}
+                  {isGpsLoading ? 'Syncing...' : useSimulatedControls ? t.correctMap : t.syncGps}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -931,7 +1180,7 @@ export default function CitizenReportScreen() {
             activeOpacity={0.85}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? 'Submitting...' : 'Submit Report 🚨'}
+              {isSubmitting ? t.submittingBtn : t.submitBtn}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -1098,7 +1347,7 @@ const styles = StyleSheet.create({
   },
   categoryChipActive: {
     borderColor: Colors.primary,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#ECFDF5',
   },
   categoryChipIcon: {
     fontSize: 26,
@@ -1134,7 +1383,7 @@ const styles = StyleSheet.create({
   },
   severityChipActive: {
     borderColor: Colors.primary,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#ECFDF5',
   },
   severityIcon: {
     fontSize: 24,
@@ -1855,5 +2104,86 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: '#3B82F6',
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  backBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: '#F1F5F9',
+  },
+  backBtnText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: '700',
+    color: Colors.citizenText,
+  },
+  langToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: BorderRadius.sm,
+    padding: 2,
+  },
+  langToggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm - 1,
+  },
+  langToggleBtnActive: {
+    backgroundColor: Colors.white,
+    ...Shadows.sm,
+  },
+  langToggleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.citizenTextSecondary,
+  },
+  langToggleTextActive: {
+    color: Colors.primary,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  // Steps active/inactive styles
+  stepNumActive: {
+    backgroundColor: Colors.primary,
+  },
+  stepNumActiveReview: {
+    backgroundColor: '#F59E0B',
+  },
+  stepNumActiveApproved: {
+    backgroundColor: '#22C55E',
+  },
+  stepNumInactive: {
+    backgroundColor: '#94A3B8',
+  },
+  stepConnector: {
+    width: 2,
+    height: 16,
+    backgroundColor: '#E2E8F0',
+    marginLeft: 11,
+    marginVertical: 2,
+  },
+  connectorActive: {
+    backgroundColor: Colors.primary,
+  },
+  connectorInactive: {
+    backgroundColor: '#E2E8F0',
+  },
+  stepPulseBadge: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  stepTextCompleted: {
+    color: Colors.citizenTextSecondary,
+    textDecorationLine: 'line-through',
   },
 });

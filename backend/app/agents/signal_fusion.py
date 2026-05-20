@@ -13,7 +13,7 @@ from app.agents.config import agent_settings
 
 
 class SignalFusionAgent(BaseAgent):
-    name = "Signal Fusion"
+    name = "Signal Fusion Agent"
     description = "Fuses 7 signal sources to verify and score incident candidates using Live Weather API & Gemini LLM"
 
     async def process(self, input_data: Dict[str, Any], incident_id: str) -> Dict[str, Any]:
@@ -25,7 +25,7 @@ class SignalFusionAgent(BaseAgent):
             ts = datetime.now(timezone.utc).strftime("%H:%M:%S.%f")[:-3]
             step_logs.append(f"[{ts}] {msg}")
 
-        add_log("📥 INITIALIZING FUSION LAYER: Ingesting active signal feeds...")
+        add_log("📡 SYSTEM: INITIALIZING FUSION LAYER: Ingesting active signal feeds...")
         add_log(f"📊 PIPELINE INGEST: Received {num_signals} active telemetry sources.")
 
         # 1. Live Weather API Check (Islamabad Telemetry)

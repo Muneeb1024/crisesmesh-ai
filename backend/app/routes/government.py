@@ -48,3 +48,20 @@ async def get_incident(incident_id: str):
     if not incident:
         raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
     return incident
+
+
+@router.post("/incidents/{incident_id}/evacuate")
+async def trigger_evacuation(incident_id: str):
+    """Trigger evacuation routing and warnings for the incident."""
+    incident = store.get_incident(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
+    
+    return {
+        "success": True,
+        "incident_id": incident_id,
+        "message": f"🚨 EVACUATION ORDER ACTIVATED: Sector G-10 bypass detours routed. Warnings dispatched.",
+        "affected_radius_m": incident.affected_radius_m,
+        "estimated_population": incident.estimated_population
+    }
+

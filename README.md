@@ -311,6 +311,41 @@ The system includes pre-configured database structures (seed scripts available i
    ```
 4. Access the web interface in your browser: **`http://localhost:8081`**
 
+### 13.4 Production Deployment (Google Cloud Run & Docker)
+
+CrisesMesh AI is fully Dockerized, allowing you to build and host both the FastAPI backend and the compiled static mobile web client together inside a single, unified container image.
+
+#### Option A: Continuous Deployment via GitHub (Recommended)
+1. Push this repository to your **GitHub** account.
+2. Go to your **Google Cloud Console** and search for **Cloud Run**.
+3. Click **Create Service**.
+4. Select **"Continuously deploy new revisions from a source repository"** and connect your GitHub repository.
+5. Select your branch and click **Next**.
+6. Set the Build Configuration to **Dockerfile** (located in the repository root).
+7. Under **Advanced Settings**, ensure you configure the following Environment Variables:
+   - `GEMINI_API_KEY`: Your Gemini API Key
+   - `MAPBOX_TOKEN`: Your Mapbox Access Token
+8. Click **Create** to deploy. Google Cloud will automatically trigger the build pipeline, host your app, and provide a secure public `https://...` endpoint.
+
+#### Option B: Deploying via Local Docker CLI
+1. Build the container image locally:
+   ```bash
+   docker build -t crisesmesh-ai .
+   ```
+2. Test the container locally to verify it starts and bundles successfully:
+   ```bash
+   docker run -p 8080:8080 -e GEMINI_API_KEY="your-key" -e MAPBOX_TOKEN="your-token" crisesmesh-ai
+   ```
+3. Push the built image to **Google Artifact Registry (GAR)** or **Google Container Registry (GCR)**:
+   ```bash
+   docker tag crisesmesh-ai gcr.io/your-gcp-project/crisesmesh-ai:latest
+   docker push gcr.io/your-gcp-project/crisesmesh-ai:latest
+   ```
+4. Deploy the pushed image directly to Cloud Run:
+   ```bash
+   gcloud run deploy crisesmesh-ai --image gcr.io/your-gcp-project/crisesmesh-ai:latest --platform managed --allow-unauthenticated --port 8080
+   ```
+
 ---
 
 ## 14. Demo Credentials & Operation

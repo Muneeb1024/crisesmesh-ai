@@ -10,6 +10,9 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 
+from app.store import store
+from app.schemas import ShelterResponse
+
 router = APIRouter(prefix="/resources", tags=["Resources"])
 
 # ── Seed resource pool ────────────────────────────────────────────────
@@ -34,6 +37,23 @@ _approvals: Dict[str, Dict[str, Any]] = {}  # incident_id -> approval record
 async def list_resources():
     """List all resources with their current status."""
     return {"resources": list(_resources.values()), "count": len(_resources)}
+
+# ──────────── Shelter Endpoints ────────────
+
+@router.get("/shelters", response_model=List[ShelterResponse])
+async def list_shelters():
+    """List all disaster shelters."""
+    return store.list_shelters()
+
+
+@router.post("/shelters/{shelter_id}/toggle")
+async def toggle_shelter(shelter_id: str):
+    """Toggle a shelter between Available and Closed."""
+    success = store.toggle_shelter(shelter_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Shelter {shelter_id} not found")
+    sh = store.get_shelter(shelter_id)
+    return {"success": True, "shelter": sh, "message": f"Shelter {shelter_id} status toggled successfully."}
 
 
 @router.get("/{resource_id}")
@@ -100,3 +120,6 @@ async def release_resources(payload: Dict[str, Any]):
             released.append(rid)
 
     return {"success": True, "released": released}
+
+
+

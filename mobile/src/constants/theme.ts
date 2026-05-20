@@ -1,8 +1,4 @@
-/**
- * CrisesMesh AI — Design Tokens & Theme
- * Citizen: Clean, light, trust-inducing
- * Government: Dark command-center aesthetic
- */
+import { Platform } from 'react-native';
 
 export const Colors = {
   // Primary brand
@@ -61,9 +57,44 @@ export const Colors = {
 
 export const Typography = {
   fontFamily: {
-    regular: 'System',
-    medium: 'System',
-    bold: 'System',
+    // English custom font stacks
+    regular: Platform.select({
+      ios: 'System',
+      android: 'sans-serif',
+      web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      default: 'System',
+    }),
+    medium: Platform.select({
+      ios: 'System',
+      android: 'sans-serif-medium',
+      web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      default: 'System',
+    }),
+    bold: Platform.select({
+      ios: 'System',
+      android: 'sans-serif-bold',
+      web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      default: 'System',
+    }),
+    // Urdu custom font stacks
+    urRegular: Platform.select({
+      ios: 'Geeza Pro',
+      android: 'sans-serif',
+      web: '"Noto Sans Arabic", "Noto Naskh Arabic", sans-serif',
+      default: 'System',
+    }),
+    urMedium: Platform.select({
+      ios: 'Geeza Pro',
+      android: 'sans-serif-medium',
+      web: '"Noto Sans Arabic", "Noto Naskh Arabic", sans-serif',
+      default: 'System',
+    }),
+    urBold: Platform.select({
+      ios: 'Geeza Pro',
+      android: 'sans-serif-bold',
+      web: '"Noto Sans Arabic", "Noto Naskh Arabic", sans-serif',
+      default: 'System',
+    }),
   },
   sizes: {
     xs: 10,

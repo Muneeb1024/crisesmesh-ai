@@ -33,6 +33,55 @@ class InMemoryStore:
         self._report_counter = 0
         self._signal_counter = 0
         self._incident_counter = 0
+        
+        # Shelter Seeds
+        self.shelters: Dict[str, dict] = {
+            "shelter_001": {
+                "id": "shelter_001",
+                "name": "G-10 Community Center Shelter",
+                "status": "Available",
+                "capacity": 250,
+                "occupancy": 85,
+                "lat": 33.6912,
+                "lng": 73.0485
+            },
+            "shelter_002": {
+                "id": "shelter_002",
+                "name": "F-11 CDA Model School Safe Zone",
+                "status": "Available",
+                "capacity": 180,
+                "occupancy": 42,
+                "lat": 33.6824,
+                "lng": 73.0189
+            },
+            "shelter_003": {
+                "id": "shelter_003",
+                "name": "Sector I-9 Social Welfare Center",
+                "status": "Closed",
+                "capacity": 300,
+                "occupancy": 0,
+                "lat": 33.6591,
+                "lng": 73.0632
+            }
+        }
+
+        # Seed an initial incident for testing and demo consistency
+        now = datetime.now(timezone.utc)
+        self.incidents["inc_001"] = IncidentResponse(
+            id="inc_001",
+            type="Urban Flooding",
+            status=IncidentStatus.ACTIVE,
+            severity=SeverityLevel.CRITICAL,
+            confidence=0.88,
+            priority_score=85,
+            lat=33.6938,
+            lng=73.0652,
+            affected_radius_m=1200,
+            estimated_population=15000,
+            expected_duration_hours=6,
+            created_at=now
+        )
+
 
     # ──────────── Reports ────────────
 
@@ -129,6 +178,25 @@ class InMemoryStore:
     def get_incident(self, incident_id: str) -> IncidentResponse | None:
         return self.incidents.get(incident_id)
 
+    # ──────────── Shelters ────────────
+
+    def list_shelters(self) -> List[dict]:
+        return list(self.shelters.values())
+
+    def get_shelter(self, shelter_id: str) -> dict | None:
+        return self.shelters.get(shelter_id)
+
+    def toggle_shelter(self, shelter_id: str) -> bool:
+        if shelter_id in self.shelters:
+            curr = self.shelters[shelter_id]["status"]
+            next_status = "Closed" if curr == "Available" else "Available"
+            self.shelters[shelter_id]["status"] = next_status
+            if next_status == "Closed":
+                self.shelters[shelter_id]["occupancy"] = 0
+            return True
+        return False
+
 
 # Global singleton
 store = InMemoryStore()
+

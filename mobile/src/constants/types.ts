@@ -110,18 +110,24 @@ export interface Alert {
 
 // Navigation types
 export type RootStackParamList = {
+  // Common
   Landing: undefined;
+
+  // Citizen Flow
   CitizenOnboarding: undefined;
   CitizenHome: undefined;
   CitizenReport: undefined;
   CitizenReportStatus: { reportId: string };
   CitizenAlerts: undefined;
-  CitizenAlertLive: undefined;
   CitizenMap: undefined;
+  CitizenAlertLive: undefined;
+
+  // Government Flow
   GovernmentPin: undefined;
   GovernmentHome: undefined;
   GovernmentIncident: { incidentId: string };
-  AgentTracePanel: { incidentId?: string };
+  AgentTracePanel: { incidentId: string };
+  SignalFusion: undefined;
   ResourceAllocation: { incidentId?: string };
   RedZoneMap: { incidentId?: string };
   AlertApproval: { incidentId?: string };

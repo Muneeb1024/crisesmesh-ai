@@ -1,12 +1,12 @@
 """
 CrisesMesh AI — Resource Allocation Agent
-Suggests optimal resource deployment based on incident severity and location.
+Suggests optimal resource deployment based on incident severity using Google Gemini.
 """
 
 from typing import Any, Dict, List
 from datetime import datetime, timezone
 from app.agents.base_agent import BaseAgent
-
+from app.agents.gemini_client import query_gemini_json
 
 # Seed resources (matches migrations/001_initial_schema.sql)
 AVAILABLE_RESOURCES = [
@@ -27,8 +27,8 @@ AVAILABLE_RESOURCES = [
 
 
 class ResourceAllocationAgent(BaseAgent):
-    name = "Resource Allocation"
-    description = "Suggests optimal resource deployment based on severity and proximity"
+    name = "Resource Allocation Agent"
+    description = "Suggests optimal resource deployment based on severity and proximity using Gemini LLM"
 
     async def process(self, input_data: Dict[str, Any], incident_id: str) -> Dict[str, Any]:
         severity_result = input_data.get("severity_result", {})
@@ -39,10 +39,10 @@ class ResourceAllocationAgent(BaseAgent):
             ts = datetime.now(timezone.utc).strftime("%H:%M:%S.%f")[:-3]
             step_logs.append(f"[{ts}] {msg}")
 
-        add_log("⚙️ INITIALIZING DISPATCH RESOLVER: Ingesting active incident severity...")
+        add_log("⚙️ SYSTEM: INITIALIZING DISPATCH RESOLVER: Ingesting active incident severity...")
         add_log(f"🔎 SEVERITY REFERENCE: Ingested priority severity level '{severity}'.")
 
-        # Resource allocation rules by severity
+        # --- HEURISTIC FALLBACK CALCULATION ---
         allocation_rules = {
             "Critical": {"Rescue Team": 2, "Ambulance": 2, "Police Unit": 2, "Water Pump": 2, "Field Officer": 2},
             "High":     {"Rescue Team": 1, "Ambulance": 1, "Police Unit": 2, "Water Pump": 1, "Field Officer": 2},
@@ -51,21 +51,18 @@ class ResourceAllocationAgent(BaseAgent):
         }
 
         rules = allocation_rules.get(severity, allocation_rules["Medium"])
-        allocated: List[Dict] = []
+        allocated_fallback: List[Dict] = []
         used_types: Dict[str, int] = {}
 
         add_log(f"🎚️ DEMAND METRICS: Target quota required -> {dict(rules)}.")
-
-        # Sort by ETA (nearest first)
         sorted_resources = sorted(AVAILABLE_RESOURCES, key=lambda r: r["eta"])
-        add_log("📡 GPS GEOPROXIMITY SCAN: Computing distance matrices for all active rescue hubs...")
 
         for res in sorted_resources:
             rtype = res["type"]
             needed = rules.get(rtype, 0)
             used = used_types.get(rtype, 0)
             if used < needed:
-                allocated.append({
+                allocated_fallback.append({
                     "resource_id": res["id"],
                     "type": rtype,
                     "name": res["name"],
@@ -73,39 +70,101 @@ class ResourceAllocationAgent(BaseAgent):
                     "status": "Suggested",
                 })
                 used_types[rtype] = used + 1
-                add_log(f"✅ UNIT ASSIGNED: '{res['name']}' ({rtype}) - ETA: {res['eta']}m.")
 
-        total_capacity = sum(
+        total_capacity_fallback = sum(
             r["capacity"] for r in AVAILABLE_RESOURCES
-            if r["id"] in [a["resource_id"] for a in allocated]
+            if r["id"] in [a["resource_id"] for a in allocated_fallback]
+        )
+        avg_eta_fallback = sum(a["eta_minutes"] for a in allocated_fallback) / max(len(allocated_fallback), 1)
+        
+        fallback_reasoning = (
+            f"Severity: {severity} (Offline Sandbox). "
+            f"Allocated {len(allocated_fallback)} resources. "
+            f"Average ETA: {avg_eta_fallback:.0f} minutes. "
+            f"Total capacity: {total_capacity_fallback} personnel."
         )
 
-        reason_parts = [f"{v}x {k}" for k, v in rules.items() if v > 0]
-        avg_eta = sum(a["eta_minutes"] for a in allocated) / max(len(allocated), 1)
+        fallback_output = {
+            "allocated_resources": allocated_fallback,
+            "total_resources": len(allocated_fallback),
+            "total_capacity": total_capacity_fallback,
+            "avg_eta_minutes": round(avg_eta_fallback),
+            "tradeoff_summary": f"Prioritized speed (nearest resources) over capacity balance.",
+            "reasoning_summary": fallback_reasoning
+        }
+
+        # --- REAL COGNITIVE GEMINI LOOP ---
+        prompt = f"""
+        You are the CrisesMesh AI Resource Allocation Agent. Your task is to recommend the optimal emergency resources to dispatch based on incident severity.
+        
+        Incident Severity Result:
+        {severity_result}
+        
+        Available Emergency Resources:
+        {AVAILABLE_RESOURCES}
+        
+        Recommend resource allocations based on:
+        - Critical severity needs more resources (ambulances, police units, rescue teams, water pumps, field officers)
+        - Low severity needs fewer resources
+        - Prioritize resources with lower ETA (minutes)
+        - Balance speed (ETA) and unit capacity (e.g. Rescue Teams have capacity 8, Ambulances capacity 2)
+        
+        Return a clean JSON containing exactly:
+        - "allocated_resource_ids": (list of strings, chosen from available resource "id"s)
+        - "tradeoff_summary": (string, 1-2 sentence explaining the resource allocation trade-off decision)
+        - "reasoning_summary": (string, 1-2 sentence explanation of your decision for command transparency)
+        """
+
+        add_log("📡 GPS GEOPROXIMITY SCAN: Computing distance matrices for all active rescue hubs...")
+        add_log("🤖 COGNITIVE BRAIN: Querying Google Gemini 1.5 Flash resource allocation core...")
+        
+        gemini_res = await query_gemini_json(prompt, model="gemini-1.5-flash", fallback_result=None)
+        
+        if gemini_res and "allocated_resource_ids" in gemini_res:
+            allocated_ids = gemini_res["allocated_resource_ids"]
+            allocated: List[Dict] = []
+            for r in AVAILABLE_RESOURCES:
+                if r["id"] in allocated_ids:
+                    allocated.append({
+                        "resource_id": r["id"],
+                        "type": r["type"],
+                        "name": r["name"],
+                        "eta_minutes": r["eta"],
+                        "status": "Suggested",
+                    })
+            
+            total_resources = len(allocated)
+            total_capacity = sum(r["capacity"] for r in AVAILABLE_RESOURCES if r["id"] in allocated_ids)
+            avg_eta = sum(a["eta_minutes"] for a in allocated) / max(total_resources, 1)
+            tradeoff_summary = gemini_res.get("tradeoff_summary", fallback_output["tradeoff_summary"])
+            reasoning_summary = gemini_res.get("reasoning_summary", fallback_reasoning)
+        else:
+            allocated = allocated_fallback
+            total_resources = len(allocated)
+            total_capacity = total_capacity_fallback
+            avg_eta = avg_eta_fallback
+            tradeoff_summary = fallback_output["tradeoff_summary"]
+            reasoning_summary = fallback_reasoning
+
+        for a in allocated:
+            add_log(f"✅ UNIT ASSIGNED: '{a['name']}' ({a['type']}) - ETA: {a['eta_minutes']}m.")
 
         add_log(f"📊 SUMMARY DISPATCHED: Total capacity allocated: {total_capacity} personnel.")
         add_log(f"🕒 SPEED OPTIMIZATION: Prioritized shortest ETA (average ETA: {avg_eta:.0f} mins).")
 
         return {
             "input_summary": f"Resource allocation for {severity} incident {incident_id}",
-            "reasoning_summary": (
-                f"Severity: {severity}. "
-                f"Allocated {len(allocated)} resources: {', '.join(reason_parts)}. "
-                f"Average ETA: {avg_eta:.0f} minutes. "
-                f"Total capacity: {total_capacity} personnel. "
-                f"Resources selected by nearest-first proximity."
-            ),
+            "reasoning_summary": reasoning_summary,
             "confidence": 0.88 if severity in ("Critical", "High") else 0.82,
             "output": {
                 "severity": severity,
                 "allocated_resources": allocated,
-                "total_resources": len(allocated),
+                "total_resources": total_resources,
                 "total_capacity": total_capacity,
                 "avg_eta_minutes": round(avg_eta),
                 "allocation_rules": rules,
-                "tradeoff_summary": f"Prioritized speed (nearest resources) over capacity balance. {len(AVAILABLE_RESOURCES) - len(allocated)} resources held in reserve.",
+                "tradeoff_summary": tradeoff_summary,
                 "requires_government_approval": True,
                 "step_logs": step_logs,
             },
         }
-
