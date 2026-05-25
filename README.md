@@ -1,6 +1,27 @@
 # CrisesMesh AI — Multi-Crisis Management Command Center for Pakistan
 
-A dual-interface mobile crisis management system that helps citizens report urban flooding and helps government responders verify signals, allocate resources, simulate actions, and coordinate alerts using AI agents.
+A dual-interface mobile crisis management system that helps citizens report urban flooding and assists government responders in verifying signals, allocating resources, simulating actions, and coordinating alerts using multi-agent AI pipelines.
+
+---
+
+## 🎥 Project Demonstration & AI Agent in Action
+
+To experience the full capabilities of **CrisesMesh AI**, check out our project demonstration and see how our developer assistant, Google Antigravity, brought this application to life:
+
+| Video | Link | Description |
+|---|---|---|
+| **🎥 Live Application Demonstration** | [Watch Demo Video](https://youtu.be/o7Q-W_RXdaA) | End-to-end walkthrough showing Citizen Reporting, AI Signal Ingestion, Government Command Center, Reroute Simulator, and Alert Approval. |
+| **🤖 Google Antigravity Usage Pitch** | [Watch Antigravity Usage Video](https://youtu.be/Ts7licb1wIs) | Behind-the-scenes recording showing how Google Antigravity autonomously debugged, compiled, solved environment issues, and deployed the app. |
+
+---
+
+## 🚀 Live Production Deployment
+
+The project has been fully built, packaged, and deployed to live production servers:
+
+* **Live Backend API**: `https://muneeb785-crisesmesh-ai.hf.space`
+* **Live Health Check**: [Health Status](https://muneeb785-crisesmesh-ai.hf.space/health)
+* **Android APK Installation**: [Download Android APK via EAS](https://expo.dev/accounts/muneeb785/projects/crisesmesh-ai/builds/d2e8b67f-e9be-4ad8-9931-34c29671183a) (Scan the QR Code on your Android device to install the application instantly).
 
 ---
 
@@ -311,40 +332,21 @@ The system includes pre-configured database structures (seed scripts available i
    ```
 4. Access the web interface in your browser: **`http://localhost:8081`**
 
-### 13.4 Production Deployment (Google Cloud Run & Docker)
+### 13.4 Production Space Deployment (Hugging Face Docker)
 
-CrisesMesh AI is fully Dockerized, allowing you to build and host both the FastAPI backend and the compiled static mobile web client together inside a single, unified container image.
+CrisesMesh AI is fully Dockerized and hosted on Hugging Face Spaces using port 7860 binding.
 
-#### Option A: Continuous Deployment via GitHub (Recommended)
-1. Push this repository to your **GitHub** account.
-2. Go to your **Google Cloud Console** and search for **Cloud Run**.
-3. Click **Create Service**.
-4. Select **"Continuously deploy new revisions from a source repository"** and connect your GitHub repository.
-5. Select your branch and click **Next**.
-6. Set the Build Configuration to **Dockerfile** (located in the repository root).
-7. Under **Advanced Settings**, ensure you configure the following Environment Variables:
-   - `GEMINI_API_KEY`: Your Gemini API Key
-   - `MAPBOX_TOKEN`: Your Mapbox Access Token
-8. Click **Create** to deploy. Google Cloud will automatically trigger the build pipeline, host your app, and provide a secure public `https://...` endpoint.
-
-#### Option B: Deploying via Local Docker CLI
-1. Build the container image locally:
-   ```bash
-   docker build -t crisesmesh-ai .
+To redeploy or update the live deployment:
+1. Ensure your local files are in order.
+2. In PowerShell, set your Hugging Face write token:
+   ```powershell
+   $env:HF_TOKEN="your_token"
    ```
-2. Test the container locally to verify it starts and bundles successfully:
-   ```bash
-   docker run -p 8080:8080 -e GEMINI_API_KEY="your-key" -e MAPBOX_TOKEN="your-token" crisesmesh-ai
+3. Run the automated deployment script:
+   ```powershell
+   backend\.venv\Scripts\python.exe deploy_hf.py
    ```
-3. Push the built image to **Google Artifact Registry (GAR)** or **Google Container Registry (GCR)**:
-   ```bash
-   docker tag crisesmesh-ai gcr.io/your-gcp-project/crisesmesh-ai:latest
-   docker push gcr.io/your-gcp-project/crisesmesh-ai:latest
-   ```
-4. Deploy the pushed image directly to Cloud Run:
-   ```bash
-   gcloud run deploy crisesmesh-ai --image gcr.io/your-gcp-project/crisesmesh-ai:latest --platform managed --allow-unauthenticated --port 8080
-   ```
+4. The script copies the environment, bundles assets, and pushes directly to your Hugging Face space remote repository. The Space will automatically rebuild and go live.
 
 ---
 
@@ -354,7 +356,7 @@ CrisesMesh AI is fully Dockerized, allowing you to build and host both the FastA
 - **Citizen Onboarding**: Any name and valid phone number.
 
 ### Operation Guide
-1. Launch the web interface (`http://localhost:8081`).
+1. Launch the web interface (`http://localhost:8081`) or open the Android APK.
 2. Click **Continue as Citizen** and complete the onboarding step.
 3. Submit a severe urban flooding complaint near **G-10 Underpass**.
 4. Go back, select **Government Command Center**, and enter PIN `1122`.
