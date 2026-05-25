@@ -2,7 +2,7 @@
  * CrisesMesh AI — Alert Approval Screen (Task 4.4)
  * Government reviews AI-drafted bilingual alerts and approves/retracts.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
   StyleSheet, StatusBar, Alert, TextInput,
@@ -48,6 +48,23 @@ export default function AlertApprovalScreen({ navigation, route }: any) {
   const [alertStatus, setAlertStatus] = useState<AlertStatus>('Draft');
   const [approving, setApproving] = useState(false);
   const [activeTab, setActiveTab] = useState<'public' | 'stakeholders'>('public');
+
+  useEffect(() => {
+    const fetchExistingAlert = async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/alerts`);
+        const d = await r.json();
+        const existing = (d.alerts || []).find((a: any) => a.incident_id === incidentId);
+        if (existing) {
+          setAlertDraft(existing);
+          setAlertStatus(existing.status);
+        }
+      } catch (e) {
+        console.log("Error loading alert:", e);
+      }
+    };
+    fetchExistingAlert();
+  }, [incidentId]);
 
   const generateAlert = async () => {
     setGenerating(true);
@@ -257,15 +274,25 @@ export default function AlertApprovalScreen({ navigation, route }: any) {
               /* Stakeholder Messages */
               <>
                 <Text style={s.sectionLabel}>Auto-Generated Stakeholder Notifications</Text>
-                {STAKEHOLDER_MESSAGES.map((sm, i) => (
-                  <View key={i} style={s.stakeholderCard}>
-                    <View style={s.stakeholderHeader}>
-                      <Text style={s.stakeholderIcon}>{sm.icon}</Text>
-                      <Text style={s.stakeholderRole}>{sm.role}</Text>
+                {(alertDraft.stakeholder_notifications || STAKEHOLDER_MESSAGES).map((sm: any, i: number) => {
+                  const getIcon = (role: string) => {
+                    const r = role.toLowerCase();
+                    if (r.includes('rescue')) return '🚒';
+                    if (r.includes('hospital') || r.includes('pims')) return '🏥';
+                    if (r.includes('police') || r.includes('traffic')) return '👮';
+                    if (r.includes('wasa') || r.includes('utility')) return '💧';
+                    return '📋';
+                  };
+                  return (
+                    <View key={i} style={s.stakeholderCard}>
+                      <View style={s.stakeholderHeader}>
+                        <Text style={s.stakeholderIcon}>{sm.icon || getIcon(sm.to || sm.role || '')}</Text>
+                        <Text style={s.stakeholderRole}>{sm.to || sm.role}</Text>
+                      </View>
+                      <Text style={s.stakeholderMsg}>{sm.message || sm.msg}</Text>
                     </View>
-                    <Text style={s.stakeholderMsg}>{sm.msg}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </>
             )}
 

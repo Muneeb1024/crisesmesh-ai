@@ -4,13 +4,30 @@
  */
 
 // Backend URL — change for production
-const API_BASE = 'http://10.0.2.2:8000'; // Android emulator → localhost
-const API_BASE_WEB = 'http://localhost:8000'; // Web/Expo Go
+const API_BASE = 'https://muneeb785-crisesmesh-ai.hf.space'; // Production Hugging Face Space URL
+const LOCAL_IP = '192.168.100.15'; // Host computer IP on Local Wi-Fi
+const API_BASE_LOCAL = `http://${LOCAL_IP}:8000`; // Local development URL for mobile
+
+const getApiBaseWeb = () => {
+  if (typeof window === 'undefined' || !window.location) {
+    return 'http://localhost:8000';
+  }
+  const origin = window.location.origin;
+  // If we are running on Expo web development ports (8081 or 19006), rewrite the API base to port 8000 on the same host
+  if (origin.includes(':8081') || origin.includes(':19006')) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return origin;
+};
+
+const API_BASE_WEB = getApiBaseWeb();
 const API_V1 = '/api/v1';
 
 // Detect platform — use web URL for Expo web
 import { Platform } from 'react-native';
-export const BASE_URL = Platform.OS === 'web' ? API_BASE_WEB : API_BASE;
+export const BASE_URL = Platform.OS === 'web' 
+  ? API_BASE_WEB 
+  : (__DEV__ ? API_BASE_LOCAL : API_BASE);
 export const API_BASE_URL = `${BASE_URL}${API_V1}`;
 
 // ──────────── Types ────────────

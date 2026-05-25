@@ -50,6 +50,38 @@ async def run_agent_pipeline(incident_id: str = "inc_001"):
     # Store traces
     _trace_store[incident_id] = result["traces"]
 
+    # Save the notification alert to the global alerts store
+    notification_output = result["final_output"].get("notification", {})
+    if notification_output:
+        alert_info = notification_output.get("alert", {})
+        if alert_info:
+            from app.routes.alerts import _alerts
+            from datetime import datetime, timezone
+            import uuid
+
+            # Clear any existing alerts for this incident to avoid duplicate clutter
+            keys_to_delete = [k for k, v in _alerts.items() if v.get("incident_id") == incident_id]
+            for k in keys_to_delete:
+                del _alerts[k]
+
+            alert_id = f"alert_{uuid.uuid4().hex[:8]}"
+            alert = {
+                "id": alert_id,
+                "incident_id": incident_id,
+                "status": "Draft",
+                "severity": alert_info.get("severity", incident.severity.value if (incident and incident.severity) else "Medium"),
+                "incident_type": incident.type if incident else "Urban Flooding",
+                "location": "G-10 Underpass, Islamabad" if (incident and incident.lat == 33.6793) else (f"Coordinates: {incident.lat:.4f}, {incident.lng:.4f}" if incident else "G-10 Underpass, Islamabad"),
+                "english_text": alert_info.get("english_text", ""),
+                "roman_urdu_text": alert_info.get("roman_urdu_text", ""),
+                "channels": alert_info.get("channels", ["in_app", "sms", "whatsapp"]),
+                "stakeholder_notifications": notification_output.get("stakeholder_notifications", []),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "approved_by": None,
+                "approved_at": None,
+            }
+            _alerts[alert_id] = alert
+
     # Update incident with agent outputs
     severity_output = result["final_output"].get("severity", {})
     classification_output = result["final_output"].get("classification", {})

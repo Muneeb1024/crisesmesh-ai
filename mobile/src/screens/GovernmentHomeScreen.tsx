@@ -25,7 +25,7 @@ import {
   listIncidents,
   listReports,
   getAgentTraces,
-  runAgentPipeline,
+  runAgentPipeline as runAgentPipelineAPI,
   checkHealth,
   fetchShelters,
   toggleShelter,
@@ -37,6 +37,89 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'GovernmentHome'>;
+
+const SIDEBAR_CRISES = [
+  { id: 'urban-flooding', label: 'Urban Flooding', emoji: '🌊' },
+  { id: 'traffic-blockage', label: 'Traffic Blockage', emoji: '🚦' },
+  { id: 'heat-emergency', label: 'Heat Emergency', emoji: '🌡️' },
+  { id: 'power-outage', label: 'Power Outage', emoji: '⚡' },
+  { id: 'disease-cluster', label: 'Disease Cluster', emoji: '☣️' },
+  { id: 'public-disorder', label: 'Public Disorder', emoji: '🛡️' },
+  { id: 'infrastructure-failure', label: 'Infrastructure Failure', emoji: '🏗️' }
+];
+
+const MOCK_LOGS_FOR_CRISES: Record<string, { id: string; time: string; tag: string; log: string; status: 'blue' | 'red' | 'green' }[]> = {
+  'Urban Flooding': [
+    { id: 'uf-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'Fusing 12 tweets, 2 IoT water spikes, & Weather API data.', status: 'blue' },
+    { id: 'uf-2', time: '15:40:32', tag: 'VETTING', log: 'Vetting reliability: confidence score calculated at 94%.', status: 'red' },
+    { id: 'uf-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Urban Flooding in G-10 area.', status: 'blue' },
+    { id: 'uf-4', time: '15:41:20', tag: 'SEVERITY', log: 'Severity evaluated: High. Affected radius estimated at 850m.', status: 'red' },
+    { id: 'uf-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Re-routing 4 Ambulances & 2 Rescue Teams to G-10.', status: 'green' },
+    { id: 'uf-6', time: '15:42:01', tag: 'SIMULATION', log: 'Predicting 80% traffic blockage on Kashmir Hwy. Detour generated.', status: 'blue' },
+    { id: 'uf-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Generated bilingual alerts: English and Urdu translations.', status: 'blue' },
+    { id: 'uf-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Staging bilingual (UR/EN) broadcast alerts for Sector G-10.', status: 'green' }
+  ],
+  'Traffic Blockage': [
+    { id: 'tb-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'Heavy congestion detected on Srinagar Highway (Eastward).', status: 'blue' },
+    { id: 'tb-2', time: '15:40:30', tag: 'VETTING', log: 'Signal verified: traffic camera feed and maps match.', status: 'green' },
+    { id: 'tb-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Traffic Blockage.', status: 'blue' },
+    { id: 'tb-4', time: '15:41:22', tag: 'SEVERITY', log: 'Severity evaluated: Medium. Priority score set to 65.', status: 'red' },
+    { id: 'tb-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Deploying traffic wardens to G-9 junction for manual control.', status: 'green' },
+    { id: 'tb-6', time: '15:42:01', tag: 'SIMULATION', log: 'Generating Srinagar Highway detour routing models.', status: 'blue' },
+    { id: 'tb-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Bilingual detour advisories successfully generated.', status: 'blue' },
+    { id: 'tb-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Alert sent: Srinagar Highway East blocked. Use detour routing.', status: 'red' }
+  ],
+  'Heat Emergency': [
+    { id: 'he-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'Ground temperature detected: 45.8°C. Heat index Critical.', status: 'red' },
+    { id: 'he-2', time: '15:40:35', tag: 'VETTING', log: 'Satellite heat sensors confirm regional thermal spike.', status: 'blue' },
+    { id: 'he-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Heat Emergency.', status: 'blue' },
+    { id: 'he-4', time: '15:41:20', tag: 'SEVERITY', log: 'Severity evaluated: High. Priority score set to 85.', status: 'red' },
+    { id: 'he-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Setting up 3 mobile hydration stations in Sector I-8.', status: 'green' },
+    { id: 'he-6', time: '15:42:01', tag: 'SIMULATION', log: 'Grid stress forecast: peak cooling demand expected in 2 hours.', status: 'blue' },
+    { id: 'he-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Bilingual dehydration warnings prepared for dispatch.', status: 'blue' },
+    { id: 'he-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Broadcasting advisory: Limit outdoor activities between 11 AM - 4 PM.', status: 'blue' }
+  ],
+  'Power Outage': [
+    { id: 'po-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'Transformer trip reported at F-11 substation. Zero voltage output.', status: 'red' },
+    { id: 'po-2', time: '15:40:40', tag: 'VETTING', log: 'SCADA telemetry confirms primary circuit breaker trip.', status: 'green' },
+    { id: 'po-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Power Outage.', status: 'blue' },
+    { id: 'po-4', time: '15:41:25', tag: 'SEVERITY', log: 'Severity evaluated: Medium. Priority score set to 70.', status: 'red' },
+    { id: 'po-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Rerouting backup power & dispatching crew to substation.', status: 'green' },
+    { id: 'po-6', time: '15:42:01', tag: 'SIMULATION', log: 'Estimated restoration time simulated: 2.5 hours.', status: 'blue' },
+    { id: 'po-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Power outage notice translated to Urdu/English.', status: 'blue' },
+    { id: 'po-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Broadcast: Sector F-11 load shedding. Restoration expected soon.', status: 'blue' }
+  ],
+  'Disease Cluster': [
+    { id: 'dc-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'Dengue diagnostic reports surge in I-9 district by 180%.', status: 'red' },
+    { id: 'dc-2', time: '15:40:35', tag: 'VETTING', log: 'Clinical reports cross-referenced with medical databases.', status: 'blue' },
+    { id: 'dc-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Disease Cluster.', status: 'blue' },
+    { id: 'dc-4', time: '15:41:22', tag: 'SEVERITY', log: 'Severity evaluated: High. Priority score set to 80.', status: 'red' },
+    { id: 'dc-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Deploying anti-dengue sanitation spray teams to I-9 Sector.', status: 'green' },
+    { id: 'dc-6', time: '15:42:01', tag: 'SIMULATION', log: 'Heatmap clustering isolates vector breeding hotspots near drainage.', status: 'blue' },
+    { id: 'dc-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Sanitation guidelines translated to Urdu/English.', status: 'blue' },
+    { id: 'dc-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Direct message warning sent to residents in I-9 sector.', status: 'blue' }
+  ],
+  'Public Disorder': [
+    { id: 'pd-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'High-density crowd forming near Jinnah Avenue.', status: 'blue' },
+    { id: 'pd-2', time: '15:40:40', tag: 'VETTING', log: 'CCTV feed logs verified: crowd count exceeds 800.', status: 'red' },
+    { id: 'pd-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Public Disorder.', status: 'blue' },
+    { id: 'pd-4', time: '15:41:25', tag: 'SEVERITY', log: 'Severity evaluated: High. Priority score set to 90.', status: 'red' },
+    { id: 'pd-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Re-routing emergency services away from Jinnah Avenue.', status: 'green' },
+    { id: 'pd-6', time: '15:42:01', tag: 'SIMULATION', log: 'Predicting crowd bottleneck vectors at Jinnah Avenue.', status: 'blue' },
+    { id: 'pd-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Route diversion advisories translated successfully.', status: 'blue' },
+    { id: 'pd-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Emergency warning: High congestion at Jinnah Ave. Use alternate routes.', status: 'blue' }
+  ],
+  'Infrastructure Failure': [
+    { id: 'if-1', time: '15:40:12', tag: 'SIGNAL-FUSION', log: 'Structural vibration telemetry exceeding safety tolerance at G-8.', status: 'red' },
+    { id: 'if-2', time: '15:40:35', tag: 'VETTING', log: 'Dual-sensor cross-check confirms mechanical integrity drop.', status: 'blue' },
+    { id: 'if-3', time: '15:41:05', tag: 'CLASSIFICATION', log: 'Crisis identified: Infrastructure Failure.', status: 'blue' },
+    { id: 'if-4', time: '15:41:20', tag: 'SEVERITY', log: 'Severity evaluated: High. Priority score set to 85.', status: 'red' },
+    { id: 'if-5', time: '15:41:45', tag: 'RESOURCE-ALLOC', log: 'Closing left lane of G-8 flyover and capping speed limits.', status: 'green' },
+    { id: 'if-6', time: '15:42:01', tag: 'SIMULATION', log: 'Simulating traffic bypass loads on secondary avenues.', status: 'blue' },
+    { id: 'if-7', time: '15:42:10', tag: 'TRANSLATION', log: 'Structural bypass alerts translated successfully.', status: 'blue' },
+    { id: 'if-8', time: '15:42:15', tag: 'NOTIFICATION', log: 'Alert: Lane closure on G-8 flyover. Drive with caution.', status: 'blue' }
+  ]
+};
 
 function buildMiniMapHTML(incidents: IncidentResponse[], reports: ReportResponse[], shelters: ShelterResponse[]): string {
   const incidentsJSON = JSON.stringify(incidents.map(i => ({
@@ -273,18 +356,26 @@ export default function GovernmentHomeScreen() {
 
   // AI Orchestrator Sandbox State
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(75);
-  const [vettingAgents, setVettingAgents] = useState<{
-    vetting: boolean;
-    credibility: boolean;
-    resource: boolean;
-    translation: boolean;
-  }>({
-    vetting: true,
-    credibility: true,
-    resource: true,
-    translation: true,
+  const [vettingAgents, setVettingAgents] = useState<Record<string, boolean>>({
+    'Signal Fusion Agent': true,
+    'Vetting Agent': true,
+    'Classification Agent': true,
+    'Severity Agent': true,
+    'Resource Allocation Agent': true,
+    'Simulation Agent': true,
+    'Translation Agent': true,
+    'Notification Agent': true,
   });
   const [activeChaos, setActiveChaos] = useState<string>('');
+  const [activeCrisisCategory, setActiveCrisisCategory] = useState<string>('Urban Flooding');
+
+  // ─── Agent Pipeline State ───
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineTraces, setPipelineTraces] = useState<any[]>([]);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [nextRunCountdown, setNextRunCountdown] = useState(300); // 5 min = 300s
+  const [lastPipelineRun, setLastPipelineRun] = useState<string | null>(null);
+  const pipelineDotAnim = useRef(new Animated.Value(0)).current;
 
   // AI Orchestrator Sandbox Handlers
   const handleConfidenceChange = (direction: 'up' | 'down') => {
@@ -295,16 +386,10 @@ export default function GovernmentHomeScreen() {
     });
   };
 
-  const handleToggleAgent = (agentKey: 'vetting' | 'credibility' | 'resource' | 'translation') => {
-    const agentNames = {
-      vetting: "Vetting Agent",
-      credibility: "Credibility Agent",
-      resource: "Resource Allocator",
-      translation: "Translation Agent"
-    };
+  const handleToggleAgent = (agentKey: string) => {
     setVettingAgents(prev => {
       const nextVal = !prev[agentKey];
-      addLog("Sandbox Orchestrator", `${agentNames[agentKey]} state toggled to ${nextVal ? 'ACTIVE' : 'BYPASSED'}`, nextVal ? 'green' : 'red');
+      addLog("Sandbox Orchestrator", `${agentKey.replace(' Agent', '')} state toggled to ${nextVal ? 'ACTIVE' : 'BYPASSED'}`, nextVal ? 'green' : 'red');
       return { ...prev, [agentKey]: nextVal };
     });
   };
@@ -351,14 +436,16 @@ export default function GovernmentHomeScreen() {
     }).start(() => setShowSidebar(false));
   };
 
-  // Activity stream logs
-  const [activityLogs, setActivityLogs] = useState<any[]>([
-    { id: '1', time: '15:40:12', tag: '[SIGNAL-AGENT]', log: 'Fusing 12 tweets, 2 IoT water spikes, & Weather API data.', status: 'blue' },
-    { id: '2', time: '15:41:05', tag: '[COMMANDER-AGENT]', log: 'Confidence 92%. Declaring Verified Flood Crisis in G-10.', status: 'red' },
-    { id: '3', time: '15:41:45', tag: '[DISPATCH-AGENT]', log: 'Re-routing 4 Ambulances & 2 Rescue Teams to G-10.', status: 'green' },
-    { id: '4', time: '15:42:01', tag: '[SIMULATION-AGENT]', log: 'Predicting 80% traffic blockage on Kashmir Hwy. Detour generated.', status: 'blue' },
-    { id: '5', time: '15:42:15', tag: '[COMMS-AGENT]', log: 'Staging bilingual (UR/EN) broadcast alerts for Sector G-10.', status: 'green' }
-  ]);
+  // Activity stream logs — seeded from multi-crisis constants
+  const [activityLogs, setActivityLogs] = useState<any[]>(MOCK_LOGS_FOR_CRISES['Urban Flooding']);
+
+  const switchCrisis = (label: string) => {
+    setActiveCrisisCategory(label);
+    const logs = MOCK_LOGS_FOR_CRISES[label] || MOCK_LOGS_FOR_CRISES['Urban Flooding'];
+    setActivityLogs(logs);
+    addLog('COMMAND-SWITCH', `Crisis context switched → ${label.toUpperCase()}`, 'blue');
+    closeSidebar();
+  };
 
   const addLog = (tag: string, msg: string, status: 'green' | 'red' | 'blue') => {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -559,7 +646,7 @@ export default function GovernmentHomeScreen() {
     setSopStatus("🚒 AUTOPILOT ACTIVE: Dispatching WASA heavy pumps & ambulances...");
     addLog("Resource Allocator", "Autopilot SOP dispatch initiated via Gemini reasoning...", "green");
     try {
-      const { error } = await runAgentPipeline(activeIncidents[0].id);
+      const { error } = await runAgentPipelineAPI(activeIncidents[0].id);
       if (error) {
         setSopStatus(`⚠️ SOP Pipeline failure: ${error}`);
         addLog("System Router", `Pipeline failed: ${error}`, "red");
@@ -640,6 +727,81 @@ export default function GovernmentHomeScreen() {
     setShowFutureModal(true);
   };
 
+  // ─── Run Agent Pipeline ───
+  const runAgentPipeline = useCallback(async () => {
+    if (pipelineRunning) return;
+    setPipelineRunning(true);
+    setNextRunCountdown(300);
+    addLog('ORCHESTRATOR', '🚀 Launching 8-Agent AI Pipeline...', 'blue');
+
+    // Animate flowing dots
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pipelineDotAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(pipelineDotAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ])
+    ).start();
+
+    try {
+      const targetIncident = activeIncidents[0];
+      const incidentId = targetIncident?.id || 'inc_001';
+      const { data, error } = await runAgentPipelineAPI(incidentId);
+      if (error) {
+        addLog('ORCHESTRATOR', `⚠️ Pipeline error: ${error}`, 'red');
+        return;
+      }
+      if (data?.traces) {
+        setPipelineTraces(data.traces);
+        setLastPipelineRun(new Date().toLocaleTimeString());
+        
+        // Push traces chronologically into activity feed (reversing so oldest runs first, and since addLog prepends, newest ends up at top)
+        const sortedTraces = [...data.traces].sort((a,b) => b.execution_ms - a.execution_ms); 
+        data.traces.forEach((trace: any) => {
+          const nameClean = trace.agent_name.replace(' Agent', '').toUpperCase();
+          const logColor = trace.agent_name.includes('Vetting') || trace.agent_name.includes('Severity') 
+            ? 'red' 
+            : (trace.agent_name.includes('Notification') || trace.agent_name.includes('Resource') ? 'green' : 'blue');
+          addLog(nameClean, trace.reasoning_summary || trace.reasoning, logColor);
+        });
+
+        addLog('ORCHESTRATOR', `✅ Pipeline complete — ${data.traces.length} agents executed.`, 'green');
+        
+        // Check for bilingual alert from Translation Agent
+        const translationTrace = data.traces.find((t: any) => t.agent_name === 'Translation Agent');
+        if (translationTrace?.output?.english_text) {
+          addLog('COMMS-AGENT', `📢 BROADCAST: ${translationTrace.output.english_text.slice(0, 80)}`, 'green');
+        }
+      }
+    } catch (err) {
+      addLog('ORCHESTRATOR', '⚠️ Pipeline run failed — retrying on next cycle.', 'red');
+    } finally {
+      setPipelineRunning(false);
+      pipelineDotAnim.stopAnimation();
+      pipelineDotAnim.setValue(0);
+    }
+  }, [pipelineRunning, activeIncidents, pipelineDotAnim]);
+
+  // Auto-run pipeline every 5 minutes + countdown timer
+  useEffect(() => {
+    const countdownInterval = setInterval(() => {
+      setNextRunCountdown(prev => {
+        if (prev <= 1) {
+          runAgentPipeline();
+          return 300;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countdownInterval);
+  }, [runAgentPipeline]);
+
+  // Remove duplicate incident entries based on unique ID
+  const uniqueIncidents = displayIncidents.filter((incident, idx, self) =>
+    idx === self.findIndex((t) => t.id === incident.id)
+  );
+  const heroIncidents = uniqueIncidents.slice(0, 2);
+  const sliderIncidents = uniqueIncidents.slice(2);
+
   return (
     <View style={s.container}>
       <StatusBar barStyle="light-content" backgroundColor="#050814" />
@@ -656,7 +818,7 @@ export default function GovernmentHomeScreen() {
           <View>
             <Text style={s.headerTitle}>GOVT COMMAND CENTER</Text>
             <View style={s.headerSubtitleRow}>
-              <Text style={s.headerSubtitle}>AI Coordination</Text>
+              <Text style={s.headerSubtitle}>{activeCrisisCategory}</Text>
               <Animated.View style={[
                 s.livePulseMini,
                 { transform: [{ scale: pulseAnim }] },
@@ -685,8 +847,244 @@ export default function GovernmentHomeScreen() {
         contentContainerStyle={s.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
-        
-        {/* METRICS BELT (HORIZONTAL SCROLL) */}
+
+        {/* ════════ AGENT PIPELINE SECTION ════════ */}
+        <View style={s.pipelineSection}>
+          <View style={s.pipelineTitleRow}>
+            <View style={s.pipelineTitleLeft}>
+              <Text style={s.pipelineSectionTitle}>🤖 MULTI-AGENT ORCHESTRATOR</Text>
+              <Text style={s.pipelineSubtitle}>
+                {pipelineRunning
+                  ? '⚡ Pipeline executing...'
+                  : lastPipelineRun
+                  ? `Last run: ${lastPipelineRun}`
+                  : 'Auto-run every 5 min'}
+              </Text>
+            </View>
+            <View style={s.pipelineControls}>
+              <Text style={s.countdownText}>⏱ {Math.floor(nextRunCountdown/60)}:{String(nextRunCountdown%60).padStart(2,'0')}</Text>
+              <TouchableOpacity
+                style={[s.runNowBtn, pipelineRunning && s.runNowBtnDisabled]}
+                onPress={runAgentPipeline}
+                disabled={pipelineRunning}
+              >
+                {pipelineRunning
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={s.runNowBtnText}>▶ RUN NOW</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Horizontal Agent Cards */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.agentCardsScroll}>
+            {[
+              { name: 'Signal Fusion', emoji: '📡', key: 'Signal Fusion Agent' },
+              { name: 'Vetting', emoji: '🔍', key: 'Vetting Agent' },
+              { name: 'Classification', emoji: '🧠', key: 'Classification Agent' },
+              { name: 'Severity', emoji: '🔴', key: 'Severity Agent' },
+              { name: 'Resource', emoji: '🚑', key: 'Resource Allocation Agent' },
+              { name: 'Simulation', emoji: '🎯', key: 'Simulation Agent' },
+              { name: 'Translation', emoji: '🌐', key: 'Translation Agent' },
+              { name: 'Notification', emoji: '🔔', key: 'Notification Agent' },
+            ].map((agent, idx, arr) => {
+              const trace = pipelineTraces.find(t => t.agent_name === agent.key);
+              const isExpanded = expandedAgent === agent.key;
+              const hasRun = !!trace;
+              const conf = trace ? Math.round(trace.confidence * 100) : null;
+              
+              const isBypassed = !vettingAgents[agent.key];
+              const isRunningNow = pipelineRunning && !hasRun && (
+                idx === 0 || !!pipelineTraces.find(t => t.agent_name === arr[idx - 1].key)
+              );
+
+              const dotOpacity = isRunningNow
+                ? pipelineDotAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })
+                : 1;
+
+              return (
+                <View key={agent.key} style={s.agentCardWrapper}>
+                  <TouchableOpacity
+                    style={[
+                      s.agentCard,
+                      hasRun && s.agentCardDone,
+                      isRunningNow && s.agentCardRunning,
+                      isBypassed && s.agentCardBypassed,
+                      isExpanded && { borderColor: '#00FFD2' }
+                    ]}
+                    onPress={() => setExpandedAgent(isExpanded ? null : agent.key)}
+                    activeOpacity={0.85}
+                  >
+                    {/* Step Number */}
+                    <View style={s.agentStepBadge}>
+                      <Text style={s.agentStepText}>S{String(idx + 1).padStart(2, '0')}</Text>
+                    </View>
+
+                    {/* Status Dot */}
+                    <View style={[
+                      s.agentStatusDot,
+                      hasRun && s.agentStatusDotDone,
+                      isRunningNow && s.agentStatusDotRunning,
+                      isBypassed && s.agentStatusDotBypassed,
+                    ]} />
+
+                    {/* Emoji Container */}
+                    <View style={[
+                      s.agentEmojiContainer,
+                      hasRun && s.agentEmojiContainerDone,
+                      isRunningNow && s.agentEmojiContainerRunning,
+                    ]}>
+                      <Animated.Text style={[s.agentEmoji, { opacity: dotOpacity }]}>
+                        {agent.emoji}
+                      </Animated.Text>
+                    </View>
+
+                    {/* Agent Name */}
+                    <Text style={[
+                      s.agentName,
+                      hasRun && s.agentNameDone,
+                      isRunningNow && s.agentNameRunning,
+                      isBypassed && s.agentNameBypassed,
+                    ]} numberOfLines={2}>
+                      {agent.name}
+                    </Text>
+
+                    {/* Bottom Action Row */}
+                    <View style={s.agentBottomRow}>
+                      {isBypassed ? (
+                        <Text style={{ fontSize: 7, color: '#EF4444', fontWeight: '800' }}>SKIP</Text>
+                      ) : isRunningNow ? (
+                        <ActivityIndicator size="small" color="#0EA5E9" style={{ transform: [{ scale: 0.7 }] }} />
+                      ) : hasRun ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Text style={s.agentCheckmark}>✓</Text>
+                          {conf !== null && (
+                            <View style={s.agentConfBadge}>
+                              <Text style={s.agentConfText}>{conf}%</Text>
+                            </View>
+                          )}
+                        </View>
+                      ) : (
+                        <Text style={{ fontSize: 7, color: '#475569', fontWeight: '700' }}>WAITING</Text>
+                      )}
+                      <Text style={s.agentExpandHint}>{isExpanded ? '▲' : '▼'}</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Connecting arrow/pipeline between agents */}
+                  {idx < arr.length - 1 && (
+                    <View style={s.agentArrow}>
+                      <Animated.Text style={[
+                        s.agentArrowText,
+                        (hasRun || isRunningNow) && s.agentArrowTextActive,
+                        {
+                          opacity: isRunningNow
+                            ? pipelineDotAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })
+                            : (hasRun ? 1 : 0.25)
+                        }
+                      ]}>
+                        »
+                      </Animated.Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          {/* Expanded Agent Trace Dropdown — Terminal Edition */}
+          {expandedAgent && (() => {
+            const trace = pipelineTraces.find(t => t.agent_name === expandedAgent);
+            const copyText = trace?.reasoning || trace?.reasoning_summary || '';
+            const copyToClipboard = () => {
+              try {
+                // @ts-ignore
+                Clipboard.setString(copyText);
+                addLog('UI', '🗒 Copied trace output to clipboard', 'green');
+              } catch (e) { /* ignore */ }
+            };
+
+            return (
+              <View style={s.terminalWindow}>
+                {/* Terminal Title Bar */}
+                <View style={s.terminalHeaderBar}>
+                  <View style={s.terminalDotsRow}>
+                    <View style={[s.terminalDot, s.terminalDotRed]} />
+                    <View style={[s.terminalDot, s.terminalDotYellow]} />
+                    <View style={[s.terminalDot, s.terminalDotGreen]} />
+                  </View>
+                  <Text style={s.terminalTitleText}>bash — {expandedAgent.toLowerCase().replace(/\s+/g, '_')}.sh</Text>
+                  <TouchableOpacity onPress={copyToClipboard} style={s.terminalCopyBtn}>
+                    <Text style={s.terminalCopyBtnText}>SH_COPY</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Terminal Screen Body */}
+                <ScrollView style={s.terminalBody} nestedScrollEnabled>
+                  <Text style={s.terminalCommandPrompt}>
+                    guest@crisesmesh-ai:~$ <Text style={s.terminalCommandText}>cat /var/log/agents/{expandedAgent.toLowerCase().replace(/\s+/g, '_')}.log</Text>
+                  </Text>
+                  
+                  {(() => {
+                    const isBypassed = !vettingAgents[expandedAgent];
+                    if (isBypassed) {
+                      return (
+                        <Text style={s.terminalErrorText}>
+                          {"\n"}⚠️ WARNING: SANDBOX BYPASS OVERRIDE IS ACTIVE!
+                          {"\n"}The '{expandedAgent}' was marked as BYPASSED in the Sandbox.
+                          {"\n"}Downstream execution simulated safety parameters without this node.
+                          {"\n\n"}guest@crisesmesh-ai:~$ _
+                        </Text>
+                      );
+                    }
+                    if (trace) {
+                      return (
+                        <View style={{ marginTop: 6 }}>
+                          {/* Reasoning Summary Section */}
+                          <Text style={s.terminalLogLabel}>[REASONING]</Text>
+                          <Text style={s.terminalReasoningText}>
+                            {trace.reasoning || trace.reasoning_summary}
+                          </Text>
+
+                          {/* Stat Metrics */}
+                          <Text style={s.terminalLogLabel}>[METRICS]</Text>
+                          <Text style={s.terminalMetricText}>
+                            • CONFIDENCE_LEVEL : {Math.round(trace.confidence * 100)}%
+                            {"\n"}• EXECUTION_SPEED : {trace.execution_ms} ms
+                            {"\n"}• PIPELINE_STATUS  : COMPLETE_OK
+                          </Text>
+
+                          {/* Step Execution Logs */}
+                          {trace.output?.step_logs && trace.output.step_logs.length > 0 && (
+                            <>
+                              <Text style={s.terminalLogLabel}>[EXECUTION_FLOW]</Text>
+                              {trace.output.step_logs.map((log: string, i: number) => (
+                                <Text key={i} style={s.terminalStepLogText}>
+                                  {"  "}» {log}
+                                </Text>
+                              ))}
+                            </>
+                          )}
+                        </View>
+                      );
+                    }
+                    return (
+                      <Text style={s.terminalErrorText}>
+                        {"\n"}⚠️ ERR: Trace not found. Agent has not executed in this session.
+                        {"\n"}Please click "RUN NOW" to trigger the multi-agent orchestrator.
+                      </Text>
+                    );
+                  })()}
+                  
+                  <Text style={s.terminalPromptCursor}>
+                    guest@crisesmesh-ai:~$ <Text style={s.terminalCursorBlink}>▒</Text>
+                  </Text>
+                </ScrollView>
+              </View>
+            );
+          })()}
+        </View>
+
+
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
@@ -833,52 +1231,239 @@ export default function GovernmentHomeScreen() {
             <View style={s.badgePill}><Text style={s.badgePillText}>{displayIncidents.length} Active</Text></View>
           </View>
 
-          {displayIncidents.map((incident, index) => {
-            const meta = getIncidentMeta(incident.type);
-            const severityColor = incident.severity === 'Critical' ? '#EF4444' : (incident.severity === 'High' ? '#F97316' : '#EAB308');
-            const severityBg = incident.severity === 'Critical' ? 'rgba(239, 68, 68, 0.15)' : (incident.severity === 'High' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(234, 179, 8, 0.15)');
-            
-            return (
-              <View key={incident.id} style={[s.incidentRow, { borderColor: severityColor + '40', marginBottom: index === displayIncidents.length - 1 ? 0 : 12 }]}>
-                <View style={s.incidentRowLeft}>
-                  <View style={[s.numBox, { backgroundColor: severityColor + '20', borderColor: severityColor }]}>
-                    <Text style={[s.numText, { color: severityColor }]}>{index + 1}</Text>
-                    <Text style={s.numIcon}>{meta.emoji}</Text>
-                  </View>
-                  <View style={s.incidentMeta}>
-                    <View style={s.incidentMetaTop}>
-                      <Text style={s.incidentTitle}>{incident.type}</Text>
-                      <View style={[s.statusBadge, { backgroundColor: severityBg, borderColor: severityColor }]}>
-                        <Text style={[s.statusBadgeText, { color: severityColor }]}>{incident.severity.toUpperCase()}</Text>
+          {/* HERO INCIDENTS (TOP 2) */}
+          <View style={s.heroIncidentsList}>
+            {heroIncidents.map((incident, index) => {
+              const meta = getIncidentMeta(incident.type);
+              const severityColor = incident.severity === 'Critical' ? '#EF4444' : (incident.severity === 'High' ? '#F97316' : '#EAB308');
+              const severityBg = incident.severity === 'Critical' ? 'rgba(239, 68, 68, 0.15)' : (incident.severity === 'High' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(234, 179, 8, 0.15)');
+              
+              return (
+                <View key={incident.id} style={[s.incidentRow, { borderColor: severityColor + '40', marginBottom: index === heroIncidents.length - 1 ? 0 : 12 }]}>
+                  <View style={s.incidentRowLeft}>
+                    <View style={[s.numBox, { backgroundColor: severityColor + '20', borderColor: severityColor }]}>
+                      <Text style={[s.numText, { color: severityColor }]}>{index + 1}</Text>
+                      <Text style={s.numIcon}>{meta.emoji}</Text>
+                    </View>
+                    <View style={s.incidentMeta}>
+                      <View style={s.incidentMetaTop}>
+                        <Text style={s.incidentTitle}>{incident.type}</Text>
+                        <View style={[s.statusBadge, { backgroundColor: severityBg, borderColor: severityColor }]}>
+                          <Text style={[s.statusBadgeText, { color: severityColor }]}>{incident.severity.toUpperCase()}</Text>
+                        </View>
+                      </View>
+                      <Text style={s.incidentLocation}>{meta.location}</Text>
+                      
+                      {/* Meta details grid */}
+                      <View style={s.paramGrid}>
+                        <Text style={s.paramItem}>Confidence: <Text style={{ color: '#22C55E', fontWeight: '800' }}>{Math.round(incident.confidence * 100)}%</Text></Text>
+                        <Text style={s.paramItem}>Risk Area: <Text style={{ color: '#EAB308' }}>{incident.affected_radius_m}m Radius</Text></Text>
+                        <Text style={s.paramItem}>Risk Pop: <Text style={{ color: '#A855F7' }}>{incident.estimated_population.toLocaleString()}</Text></Text>
+                        <Text style={s.paramItem}>Peak In: <Text style={{ color: '#0EA5E9' }}>{incident.peak_impact_time || `${incident.expected_duration_hours} hrs`}</Text></Text>
+                        <Text style={s.paramItem}>Trend: <Text style={{ color: meta.trendColor }}>{meta.trend}</Text></Text>
+                        <Text style={s.paramItem}>Duration: <Text style={{ color: '#94A3B8' }}>{incident.expected_duration_hours} hrs</Text></Text>
+                      </View>
+
+                      <View style={s.recActionRow}>
+                        <Text style={s.recActionLabel}>AI Recommend: <Text style={[s.recActionText, { color: severityColor }]}>{meta.recommendation}</Text></Text>
                       </View>
                     </View>
-                    <Text style={s.incidentLocation}>{meta.location}</Text>
-                    
-                    {/* Meta details grid */}
-                    <View style={s.paramGrid}>
-                      <Text style={s.paramItem}>Confidence: <Text style={{ color: '#22C55E', fontWeight: '800' }}>{Math.round(incident.confidence * 100)}%</Text></Text>
-                      <Text style={s.paramItem}>Risk Area: <Text style={{ color: '#EAB308' }}>{incident.affected_radius_m}m Radius</Text></Text>
-                      <Text style={s.paramItem}>Risk Pop: <Text style={{ color: '#A855F7' }}>{incident.estimated_population.toLocaleString()}</Text></Text>
-                      <Text style={s.paramItem}>Peak In: <Text style={{ color: '#0EA5E9' }}>{incident.peak_impact_time || `${incident.expected_duration_hours} hrs`}</Text></Text>
-                      <Text style={s.paramItem}>Trend: <Text style={{ color: meta.trendColor }}>{meta.trend}</Text></Text>
-                      <Text style={s.paramItem}>Duration: <Text style={{ color: '#94A3B8' }}>{incident.expected_duration_hours} hrs</Text></Text>
-                    </View>
+                  </View>
 
-                    <View style={s.recActionRow}>
-                      <Text style={s.recActionLabel}>AI Recommend: <Text style={[s.recActionText, { color: severityColor }]}>{meta.recommendation}</Text></Text>
-                    </View>
+                  <TouchableOpacity 
+                    style={s.quickActionsBtn}
+                    onPress={() => navigation.navigate('GovernmentIncident', { incidentId: incident.id })}
+                  >
+                    <Text style={s.quickActionsText}>Quick Actions ›</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* SLIDER CONTAINER FOR REMAINING ACTIVE REGIONAL THREATS */}
+          {sliderIncidents.length > 0 && (
+            <View style={s.sliderContainer}>
+              <Text style={s.sliderSectionTitle}>📡 ACTIVE REGIONAL THREATS ({sliderIncidents.length})</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.sliderScrollContent}
+              >
+                {sliderIncidents.map((incident) => {
+                  const meta = getIncidentMeta(incident.type);
+                  const severityColor = incident.severity === 'Critical' ? '#EF4444' : (incident.severity === 'High' ? '#F97316' : '#EAB308');
+                  const severityBg = incident.severity === 'Critical' ? 'rgba(239, 68, 68, 0.15)' : (incident.severity === 'High' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(234, 179, 8, 0.15)');
+
+                  return (
+                    <TouchableOpacity 
+                      key={incident.id} 
+                      style={[s.sliderCard, { borderColor: severityColor + '40' }]}
+                      activeOpacity={0.8}
+                      onPress={() => navigation.navigate('GovernmentIncident', { incidentId: incident.id })}
+                    >
+                      <View style={s.sliderCardHeader}>
+                        <Text style={s.sliderCardEmoji}>{meta.emoji}</Text>
+                        <View style={[s.sliderSeverityBadge, { backgroundColor: severityBg, borderColor: severityColor }]}>
+                          <Text style={[s.sliderSeverityText, { color: severityColor }]}>{incident.severity}</Text>
+                        </View>
+                      </View>
+
+                      <Text style={s.sliderCardTitle} numberOfLines={1}>{incident.type}</Text>
+                      <Text style={s.sliderCardLocation} numberOfLines={1}>{meta.location}</Text>
+
+                      <View style={s.sliderCardFooter}>
+                        <Text style={s.sliderConfidence}>Confidence: <Text style={{ color: '#22C55E', fontWeight: '700' }}>{Math.round(incident.confidence * 100)}%</Text></Text>
+                        <Text style={s.sliderActionText}>View Details ›</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+
+        {/* ════════ BEFORE VS AFTER CRISIS SIMULATOR ════════ */}
+        <View style={s.simulationBlock}>
+          <View style={s.simulationBlockHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.simulationTitle}>🧬 CRISIS RESOLUTION SIMULATOR (BEFORE vs AFTER AI)</Text>
+              <Text style={s.simulationSubtitle}>
+                See how our Multi-Agent pipeline deduplicates, vets, and structures chaotic raw reports.
+              </Text>
+            </View>
+            <View style={s.simBadge}>
+              <Text style={s.simBadgeText}>FUSION ACTIVE</Text>
+            </View>
+          </View>
+
+          <View style={s.simFlexRow}>
+            {/* LEFT COLUMN: THE CHAOS (BEFORE AI) */}
+            <View style={[s.simCol, s.simColBefore]}>
+              <View style={s.simColHeaderRow}>
+                <Text style={s.simColTitle}>⚠️ RAW UNVERIFIED STREAM (BEFORE)</Text>
+                <View style={s.chaosLevelBadge}>
+                  <Text style={s.chaosLevelText}>HIGH NOISE</Text>
+                </View>
+              </View>
+              <Text style={s.simColSubtitle}>Raw, conflicting, and duplicate public submissions:</Text>
+
+              <View style={s.simReportsList}>
+                {/* Report 1 */}
+                <View style={s.simReportCard}>
+                  <View style={s.simReportCardHeader}>
+                    <Text style={s.simReportReporter}>👤 Citizen: Ali Khan</Text>
+                    <Text style={s.simReportTime}>10m ago</Text>
+                  </View>
+                  <Text style={s.simReportText}>
+                    "G-10 Underpass has heavy flooding and maybe fire! Roads are completely blocked, cars are sinking."
+                  </Text>
+                  <View style={s.simReportMetaRow}>
+                    <Text style={[s.simReportBadge, { color: '#EF4444', backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>CRITICAL</Text>
+                    <Text style={s.simReportDetail}>Credibility: 45% (Unverified)</Text>
                   </View>
                 </View>
 
-                <TouchableOpacity 
-                  style={s.quickActionsBtn}
-                  onPress={() => navigation.navigate('GovernmentIncident', { incidentId: incident.id })}
-                >
-                  <Text style={s.quickActionsText}>Quick Actions ›</Text>
-                </TouchableOpacity>
+                {/* Report 2 */}
+                <View style={s.simReportCard}>
+                  <View style={s.simReportCardHeader}>
+                    <Text style={s.simReportReporter}>👤 Citizen: Waseem</Text>
+                    <Text style={s.simReportTime}>8m ago</Text>
+                  </View>
+                  <Text style={s.simReportText}>
+                    "Islamabad G10 flood. Water levels rising up to the car doors, underpass is flooded."
+                  </Text>
+                  <View style={s.simReportMetaRow}>
+                    <Text style={[s.simReportBadge, { color: '#F97316', backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>HIGH</Text>
+                    <Text style={s.simReportDetail}>Credibility: 90% (Trusted Reporter)</Text>
+                  </View>
+                </View>
+
+                {/* Report 3 (Conflicting) */}
+                <View style={s.simReportCard}>
+                  <View style={s.simReportCardHeader}>
+                    <Text style={s.simReportReporter}>👤 Citizen: Sana Jamil</Text>
+                    <Text style={s.simReportTime}>5m ago</Text>
+                  </View>
+                  <Text style={s.simReportText}>
+                    "No flood here in G-10 underpass, just typical rain. Traffic is moving fine."
+                  </Text>
+                  <View style={s.simReportMetaRow}>
+                    <Text style={[s.simReportBadge, { color: '#EAB308', backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>LOW</Text>
+                    <Text style={s.simReportDetail}>Credibility: 60% (Outlier/Conflicting)</Text>
+                  </View>
+                </View>
               </View>
-            );
-          })}
+
+              <View style={s.chaosFooter}>
+                <Text style={s.chaosFooterText}>❌ PROBLEMS: Duplicate coordinates, conflicting reports, no alerts, zero action.</Text>
+              </View>
+            </View>
+
+            {/* MIDDLE CONNECTING LOGIC */}
+            <View style={s.simCenterDivider}>
+              <View style={s.simPulseArrow}>
+                <Text style={s.simPulseArrowText}>🧬</Text>
+                <Text style={s.simPulseArrowSub}>AI FUSION</Text>
+              </View>
+            </View>
+
+            {/* RIGHT COLUMN: THE ORDER (AFTER AI RESOLUTION) */}
+            <View style={[s.simCol, s.simColAfter]}>
+              <View style={s.simColHeaderRow}>
+                <Text style={s.simColTitle}>🛡️ RESOLVED CRISIS PROFILE (AFTER)</Text>
+                <View style={s.verifiedLevelBadge}>
+                  <Text style={s.verifiedLevelText}>100% VETTED</Text>
+                </View>
+              </View>
+              <Text style={s.simColSubtitle}>Consolidated, de-duplicated and verified crisis profile:</Text>
+
+              <View style={s.simResultCard}>
+                <View style={s.simResultRow}>
+                  <Text style={s.simResultLabel}>🚨 Verified Type:</Text>
+                  <Text style={s.simResultValue}>Urban Flooding (High Confidence)</Text>
+                </View>
+                
+                <View style={s.simResultRow}>
+                  <Text style={s.simResultLabel}>📍 Vetted Location:</Text>
+                  <Text style={s.simResultValue}>G-10 Underpass, Islamabad (Centroid)</Text>
+                </View>
+
+                <View style={s.simResultRow}>
+                  <Text style={s.simResultLabel}>📊 Data Deduplication:</Text>
+                  <Text style={s.simResultValue}>4 reports merged, 1 conflicting outlier filtered</Text>
+                </View>
+
+                <View style={s.simResultRow}>
+                  <Text style={s.simResultLabel}>📈 Severity Level:</Text>
+                  <Text style={[s.simResultValue, { color: '#34D399', fontWeight: '800' }]}>CRITICAL (Vetted by Severity Agent)</Text>
+                </View>
+
+                <View style={s.simResultDivider} />
+
+                <Text style={s.simResultSectionTitle}>📢 AI Auto-Generated Alerts (Bilingual):</Text>
+                
+                <View style={s.simAlertBox}>
+                  <Text style={s.simAlertLang}>🇬🇧 ENGLISH ALERT</Text>
+                  <Text style={s.simAlertText}>
+                    🚨 EMERGENCY ALERT: Critical Urban Flooding at G-10 Underpass, Islamabad. Avoid the area immediately.
+                  </Text>
+                </View>
+
+                <View style={s.simAlertBox}>
+                  <Text style={s.simAlertLang}>🇵🇰 ROMAN URDU ALERT</Text>
+                  <Text style={s.simAlertText}>
+                    🚨 HATAMI KHABAR: G-10 Underpass Islamabad me shadeed tufani selab. Fauri tor par is ilaqe se door rahein.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={s.orderFooter}>
+                <Text style={s.orderFooterText}>✅ OUTCOME: Deduplicated cluster, verified threat level, active bilingual broadcast.</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         {/* SPLIT GRID MIDDLE BLOCK */}
@@ -1168,18 +1753,21 @@ export default function GovernmentHomeScreen() {
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             {[
-              { key: 'vetting', name: 'Vetting Agent', emoji: '🔍' },
-              { key: 'credibility', name: 'Credibility', emoji: '⚖️' },
-              { key: 'resource', name: 'Resource Alloc', emoji: '🚒' },
-              { key: 'translation', name: 'Bilingual Comms', emoji: '🗣️' },
+              { key: 'Signal Fusion Agent', name: 'Signal Fusion', emoji: '📡' },
+              { key: 'Vetting Agent', name: 'Vetting Agent', emoji: '🔍' },
+              { key: 'Classification Agent', name: 'Classification', emoji: '🧠' },
+              { key: 'Severity Agent', name: 'Severity Agent', emoji: '🔴' },
+              { key: 'Resource Allocation Agent', name: 'Resource Alloc', emoji: '🚑' },
+              { key: 'Simulation Agent', name: 'Simulation Agent', emoji: '🎯' },
+              { key: 'Translation Agent', name: 'Translation', emoji: '🌐' },
+              { key: 'Notification Agent', name: 'Notification', emoji: '🔔' },
             ].map(agent => {
-              const isActive = vettingAgents[agent.key as 'vetting' | 'credibility' | 'resource' | 'translation'];
+              const isActive = vettingAgents[agent.key];
               return (
                 <TouchableOpacity
                   key={agent.key}
                   style={{
-                    flex: 1,
-                    minWidth: '45%',
+                    width: '48%',
                     flexDirection: 'row',
                     alignItems: 'center',
                     padding: 8,
@@ -1188,11 +1776,11 @@ export default function GovernmentHomeScreen() {
                     borderColor: isActive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
                     backgroundColor: isActive ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.06)',
                   }}
-                  onPress={() => handleToggleAgent(agent.key as 'vetting' | 'credibility' | 'resource' | 'translation')}
+                  onPress={() => handleToggleAgent(agent.key)}
                 >
                   <Text style={{ fontSize: 12, marginRight: 6 }}>{agent.emoji}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800' }}>{agent.name}</Text>
+                    <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800' }} numberOfLines={1}>{agent.name}</Text>
                     <Text style={{ color: isActive ? '#22C55E' : '#EF4444', fontSize: 7, fontWeight: '700', textTransform: 'uppercase', marginTop: 1 }}>
                       {isActive ? '● Active' : '○ Bypassed'}
                     </Text>
@@ -1606,46 +2194,29 @@ export default function GovernmentHomeScreen() {
         <ScrollView style={s.sidebarScroll} contentContainerStyle={s.sidebarMenuContainer}>
           <Text style={s.sidebarSectionTitle}>MULTI-CRISIS SYSTEMS</Text>
           
-          <TouchableOpacity style={[s.sidebarMenuItem, s.sidebarMenuItemActive]} onPress={closeSidebar}>
-            <Text style={s.sidebarMenuEmoji}>🌊</Text>
-            <Text style={[s.sidebarMenuLabel, s.sidebarMenuLabelActive]}>Urban Flooding (Active)</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.sidebarMenuItem} onPress={() => { closeSidebar(); openLockedModule('Traffic Blockage'); }}>
-            <Text style={s.sidebarMenuEmoji}>🚦</Text>
-            <Text style={s.sidebarMenuLabel}>Traffic Blockage</Text>
-            <Text style={s.sidebarMenuLock}>🔒</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.sidebarMenuItem} onPress={() => { closeSidebar(); openLockedModule('Heat Emergency'); }}>
-            <Text style={s.sidebarMenuEmoji}>🌡️</Text>
-            <Text style={s.sidebarMenuLabel}>Heat Emergency</Text>
-            <Text style={s.sidebarMenuLock}>🔒</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.sidebarMenuItem} onPress={() => { closeSidebar(); openLockedModule('Power Outage'); }}>
-            <Text style={s.sidebarMenuEmoji}>⚡</Text>
-            <Text style={s.sidebarMenuLabel}>Power Outage</Text>
-            <Text style={s.sidebarMenuLock}>🔒</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.sidebarMenuItem} onPress={() => { closeSidebar(); openLockedModule('Disease Cluster'); }}>
-            <Text style={s.sidebarMenuEmoji}>☣️</Text>
-            <Text style={s.sidebarMenuLabel}>Disease Cluster</Text>
-            <Text style={s.sidebarMenuLock}>🔒</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.sidebarMenuItem} onPress={() => { closeSidebar(); openLockedModule('Public Disorder'); }}>
-            <Text style={s.sidebarMenuEmoji}>🛡️</Text>
-            <Text style={s.sidebarMenuLabel}>Public Disorder</Text>
-            <Text style={s.sidebarMenuLock}>🔒</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.sidebarMenuItem} onPress={() => { closeSidebar(); openLockedModule('Infrastructure Failure'); }}>
-            <Text style={s.sidebarMenuEmoji}>🏗️</Text>
-            <Text style={s.sidebarMenuLabel}>Infrastructure Failure</Text>
-            <Text style={s.sidebarMenuLock}>🔒</Text>
-          </TouchableOpacity>
+          {SIDEBAR_CRISES.map(crisis => {
+            const isActive = activeCrisisCategory === crisis.label;
+            return (
+              <TouchableOpacity
+                key={crisis.id}
+                style={[
+                  s.sidebarMenuItem,
+                  isActive && s.sidebarMenuItemActive
+                ]}
+                onPress={() => switchCrisis(crisis.label)}
+              >
+                <Text style={s.sidebarMenuEmoji}>{crisis.emoji}</Text>
+                <Text style={[s.sidebarMenuLabel, isActive && s.sidebarMenuLabelActive]}>
+                  {crisis.label}
+                </Text>
+                {isActive ? (
+                  <Text style={s.sidebarMenuStatusActive}>● ACTIVE</Text>
+                ) : (
+                  <Text style={s.sidebarMenuStatusStandby}>◌ STANDBY</Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         <View style={s.sidebarFooter}>
@@ -1666,7 +2237,352 @@ export default function GovernmentHomeScreen() {
 }
 
 const s = StyleSheet.create({
+  // ─── Agent Pipeline Styles ───
+  pipelineSection: {
+    backgroundColor: '#080D1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  pipelineTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pipelineTitleLeft: { flex: 1 },
+  pipelineSectionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.8,
+  },
+  pipelineSubtitle: {
+    fontSize: 9,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  pipelineControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  countdownText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0EA5E9',
+  },
+  runNowBtn: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  runNowBtnDisabled: {
+    backgroundColor: '#1E293B',
+  },
+  runNowBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  agentCardsScroll: { 
+    marginVertical: 12,
+    paddingVertical: 6,
+  },
+  agentCardWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  agentCard: {
+    width: 96,
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#334155',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    minHeight: 124,
+    justifyContent: 'space-between',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  agentCardDone: {
+    borderColor: '#34D399',
+    backgroundColor: '#064E3B',
+    shadowColor: '#34D399',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  agentCardRunning: {
+    borderColor: '#38BDF8',
+    backgroundColor: '#0891B2',
+    shadowColor: '#38BDF8',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+  },
+  agentCardBypassed: {
+    borderColor: '#EF4444',
+    backgroundColor: '#7F1D1D',
+    borderStyle: 'dashed',
+    opacity: 0.9,
+  },
+  agentStepBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 8,
+  },
+  agentStepText: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.5,
+  },
+  agentStatusDot: {
+    position: 'absolute',
+    top: 6,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#64748B',
+  },
+  agentStatusDotDone: {
+    backgroundColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+  },
+  agentStatusDotRunning: {
+    backgroundColor: '#0EA5E9',
+    shadowColor: '#0EA5E9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+  },
+  agentStatusDotBypassed: {
+    backgroundColor: '#EF4444',
+  },
+  agentEmojiContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    borderWidth: 1.5,
+    borderColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  agentEmojiContainerDone: {
+    backgroundColor: '#10B981',
+    borderColor: '#34D399',
+  },
+  agentEmojiContainerRunning: {
+    backgroundColor: '#0EA5E9',
+    borderColor: '#38BDF8',
+  },
+  agentEmoji: { 
+    fontSize: 20,
+  },
+  agentName: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    textAlign: 'center',
+    lineHeight: 11,
+    height: 22,
+    marginTop: 2,
+  },
+  agentNameDone: { 
+    color: '#FFFFFF',
+  },
+  agentNameRunning: { 
+    color: '#FFFFFF',
+  },
+  agentNameBypassed: { 
+    color: '#FCA5A5',
+  },
+  agentConfBadge: {
+    backgroundColor: '#10B981',
+    borderWidth: 1,
+    borderColor: '#34D399',
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  agentConfText: { 
+    fontSize: 7, 
+    fontWeight: '900', 
+    color: '#FFFFFF',
+  },
+  agentBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    width: '100%',
+    gap: 4,
+  },
+  agentCheckmark: { 
+    fontSize: 10, 
+    color: '#34D399', 
+    fontWeight: '900',
+  },
+  agentExpandHint: { 
+    fontSize: 8, 
+    color: '#94A3B8',
+    marginLeft: 2,
+  },
+  agentArrow: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  agentArrowText: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '900',
+  },
+  agentArrowTextActive: {
+    color: '#00FFD2',
+  },
+  
+  // ─── HIGH-FIDELITY TERMINAL STYLES ───
+  terminalWindow: {
+    backgroundColor: '#030712',
+    borderColor: '#1F2937',
+    borderWidth: 1.5,
+    borderRadius: 8,
+    marginTop: 10,
+    overflow: 'hidden',
+    shadowColor: '#00FF66',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  terminalHeaderBar: {
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
+    height: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+  },
+  terminalDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    width: 50,
+  },
+  terminalDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  terminalDotRed: { backgroundColor: '#EF4444' },
+  terminalDotYellow: { backgroundColor: '#F59E0B' },
+  terminalDotGreen: { backgroundColor: '#10B981' },
+  terminalTitleText: {
+    color: '#9CA3AF',
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    textAlign: 'center',
+    flex: 1,
+  },
+  terminalCopyBtn: {
+    backgroundColor: '#374151',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  terminalCopyBtnText: {
+    color: '#10B981',
+    fontSize: 8,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  terminalBody: {
+    padding: 10,
+    maxHeight: 250,
+    backgroundColor: '#05070F',
+  },
+  terminalCommandPrompt: {
+    color: '#3B82F6',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: '700',
+  },
+  terminalCommandText: {
+    color: '#F9FAFB',
+    fontWeight: 'normal',
+  },
+  terminalLogLabel: {
+    color: '#10B981',
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: '800',
+    marginTop: 8,
+    letterSpacing: 1,
+  },
+  terminalReasoningText: {
+    color: '#22C55E',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  terminalMetricText: {
+    color: '#00FFCC',
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  terminalStepLogText: {
+    color: '#9CA3AF',
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 13,
+    marginTop: 1,
+  },
+  terminalErrorText: {
+    color: '#EF4444',
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 14,
+    marginTop: 4,
+  },
+  terminalPromptCursor: {
+    color: '#3B82F6',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: '700',
+    marginTop: 10,
+  },
+  terminalCursorBlink: {
+    color: '#10B981',
+    fontWeight: '800',
+  },
   container: { flex: 1, backgroundColor: '#000000' },
+
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
 
@@ -2141,6 +3057,8 @@ const s = StyleSheet.create({
   sidebarMenuLabel: { flex: 1, color: '#E2E8F0', fontSize: 11, fontWeight: '700' },
   sidebarMenuLabelActive: { color: '#0EA5E9' },
   sidebarMenuLock: { fontSize: 9, color: '#64748B' },
+  sidebarMenuStatusActive: { fontSize: 8, fontWeight: '800', color: '#10B981', letterSpacing: 0.5 },
+  sidebarMenuStatusStandby: { fontSize: 8, color: '#475569', letterSpacing: 0.5 },
   sidebarFooter: {
     borderTopWidth: 1,
     borderTopColor: '#1E293B',
@@ -2177,5 +3095,357 @@ const s = StyleSheet.create({
   trendText: {
     fontSize: 7,
     fontWeight: '900',
+  },
+
+  // ─── BEFORE VS AFTER CRISIS SIMULATOR STYLES ───
+  simulationBlock: {
+    backgroundColor: '#0C1222',
+    borderWidth: 1.5,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  simulationBlockHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    paddingBottom: 12,
+    marginBottom: 16,
+  },
+  simulationTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#0EA5E9',
+    letterSpacing: 0.5,
+  },
+  simulationSubtitle: {
+    fontSize: 9.5,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  simBadge: {
+    backgroundColor: 'rgba(14, 165, 233, 0.15)',
+    borderWidth: 1,
+    borderColor: '#0EA5E9',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  simBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#0EA5E9',
+    letterSpacing: 0.5,
+  },
+  simFlexRow: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  simCol: {
+    width: '100%',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    padding: 10,
+    backgroundColor: '#0F172A',
+    overflow: 'hidden',
+  },
+  simColBefore: {
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'rgba(239, 68, 68, 0.02)',
+  },
+  simColAfter: {
+    borderColor: 'rgba(52, 211, 153, 0.3)',
+    backgroundColor: 'rgba(16, 185, 129, 0.02)',
+  },
+  simColHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  simColTitle: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    color: '#E2E8F0',
+    flexShrink: 1,
+  },
+  chaosLevelBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  chaosLevelText: {
+    fontSize: 7.5,
+    fontWeight: '900',
+    color: '#EF4444',
+  },
+  verifiedLevelBadge: {
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    borderWidth: 1,
+    borderColor: '#34D399',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  verifiedLevelText: {
+    fontSize: 7.5,
+    fontWeight: '900',
+    color: '#34D399',
+  },
+  simColSubtitle: {
+    fontSize: 8.5,
+    color: '#64748B',
+    marginBottom: 10,
+  },
+  simReportsList: {
+    gap: 8,
+  },
+  simReportCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 8,
+    overflow: 'hidden',
+  },
+  simReportCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  simReportReporter: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#E2E8F0',
+    flexShrink: 1,
+  },
+  simReportTime: {
+    fontSize: 7.5,
+    color: '#64748B',
+  },
+  simReportText: {
+    fontSize: 8.5,
+    color: '#94A3B8',
+    lineHeight: 11,
+    marginBottom: 6,
+  },
+  simReportMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  simReportBadge: {
+    fontSize: 7,
+    fontWeight: '900',
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 0.5,
+  },
+  simReportDetail: {
+    fontSize: 7.5,
+    color: '#64748B',
+  },
+  chaosFooter: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(239, 68, 68, 0.2)',
+    paddingTop: 8,
+  },
+  chaosFooterText: {
+    fontSize: 8,
+    color: '#FCA5A5',
+    fontWeight: '700',
+  },
+  simCenterDivider: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 44,
+  },
+  simPulseArrow: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1.5,
+    borderColor: '#0EA5E9',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0EA5E9',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  simPulseArrowText: {
+    fontSize: 16,
+  },
+  simPulseArrowSub: {
+    fontSize: 6,
+    fontWeight: '900',
+    color: '#0EA5E9',
+    marginTop: 1,
+  },
+  simResultCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.25)',
+    padding: 10,
+    gap: 8,
+    overflow: 'hidden',
+  },
+  simResultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 2,
+  },
+  simResultLabel: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+  },
+  simResultValue: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#E2E8F0',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  simResultDivider: {
+    height: 1,
+    backgroundColor: '#1E293B',
+    marginVertical: 4,
+  },
+  simResultSectionTitle: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#34D399',
+    marginTop: 2,
+  },
+  simAlertBox: {
+    backgroundColor: '#1E293B',
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderColor: '#34D399',
+    padding: 6,
+    gap: 2,
+  },
+  simAlertLang: {
+    fontSize: 7,
+    fontWeight: '900',
+    color: '#64748B',
+  },
+  simAlertText: {
+    fontSize: 8,
+    color: '#E2E8F0',
+    lineHeight: 10,
+  },
+  orderFooter: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(52, 211, 153, 0.2)',
+    paddingTop: 8,
+  },
+  orderFooterText: {
+    fontSize: 8,
+    color: '#A7F3D0',
+    fontWeight: '700',
+  },
+
+  // ─── THREAT CAROUSEL/SLIDER STYLES ───
+  heroIncidentsList: {
+    marginBottom: 8,
+  },
+  sliderContainer: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
+    paddingTop: 14,
+  },
+  sliderSectionTitle: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  sliderScrollContent: {
+    paddingRight: 16,
+    flexDirection: 'row',
+  },
+  sliderCard: {
+    backgroundColor: '#0F172A',
+    width: 200,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    padding: 12,
+    marginRight: 12,
+    justifyContent: 'space-between',
+    height: 110,
+  },
+  sliderCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  sliderCardEmoji: {
+    fontSize: 16,
+  },
+  sliderSeverityBadge: {
+    borderRadius: 5,
+    borderWidth: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  sliderSeverityText: {
+    fontSize: 7,
+    fontWeight: '900',
+  },
+  sliderCardTitle: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  sliderCardLocation: {
+    fontSize: 8.5,
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  sliderCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    paddingTop: 6,
+  },
+  sliderConfidence: {
+    fontSize: 8,
+    color: '#64748B',
+  },
+  sliderActionText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#0EA5E9',
   },
 });

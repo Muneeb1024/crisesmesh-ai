@@ -27,9 +27,75 @@ const { width, height } = Dimensions.get('window');
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Landing'>;
 
+const TRANSLATIONS = {
+  en: {
+    subtitle: 'Unified Crisis Command & Safety Portal',
+    portalSelection: 'PORTAL SELECTION',
+    citizenTitle: 'Citizen Portal',
+    citizenSub: 'Report emergencies & navigate safety routes',
+    citizenPill1: '🌊 Report Flood',
+    citizenPill2: '🎙️ Voice Report',
+    citizenPill3: '🗺️ Live Red Zone Map',
+    govTitle: 'Command Center',
+    govSub: 'Authorized emergency responders deck',
+    govPill1: '⚡ Signal Fusion',
+    govPill2: '🔄 Reroute Sim',
+    govPill3: '🚨 Dispatch Control',
+    footerBrand: '🇵🇰 NATIONAL EMPOWERMENT SAFETY INITIATIVE',
+    footerGrid: 'Pakistan National Emergency Grid',
+    syncStatus: 'Sync status',
+    activeSignals: 'Active Signals',
+    threatIndex: 'Threat Index',
+    connecting: 'CONNECTING',
+    online: 'ONLINE',
+    offline: 'OFFLINE',
+    unavailable: 'UNAVAILABLE',
+    nationalTicker: '🚨 NATIONAL EMERGENCY GRID HOTLINES: RESCUE (1122) • POLICE (15) • FIRE BRIGADE (16) • NDMA COORDINATION CELL: ACTIVE • DUAL BILINGUAL SYSTEM ONLINE',
+  },
+  ur: {
+    subtitle: 'متحدہ بحران کمانڈ اور حفاظتی پورٹل',
+    portalSelection: 'پورٹل کا انتخاب',
+    citizenTitle: 'عوامی پورٹل (Citizen Portal)',
+    citizenSub: 'ایمرجنسی رپورٹ کریں اور محفوظ راستے تلاش کریں',
+    citizenPill1: '🌊 رپورٹ فلڈ',
+    citizenPill2: '🎙️ وائس رپورٹ',
+    citizenPill3: '🗺️ لائیو ریڈ زون میپ',
+    govTitle: 'کمانڈ سینٹر (Command Center)',
+    govSub: 'مجاز ہنگامی عملے کا کنٹرول روم',
+    govPill1: '⚡ سگنل فیوژن',
+    govPill2: '🔄 ری روٹ سمولیشن',
+    govPill3: '🚨 ڈسپیچ کنٹرول',
+    footerBrand: '🇵🇰 قومی بحران اور ایمرجنسی نیٹ ورک',
+    footerGrid: 'پاکستان نیشنل ایمرجنسی گرڈ',
+    syncStatus: 'رابطہ کی صورتحال',
+    activeSignals: 'فعال سگنلز',
+    threatIndex: 'خطرہ کی سطح',
+    connecting: 'رابطہ ہو رہا ہے',
+    online: 'آن لائن',
+    offline: 'آف لائن',
+    unavailable: 'دستیاب نہیں',
+    nationalTicker: '🚨 قومی ایمرجنسی ہاٹ لائنز: ریسکیو (1122) • پولیس (15) • فائر بریگیڈ (16) • این ڈی ایم اے سیل: فعال • سمارٹ گرڈ چالو',
+  }
+};
+
+const REGIONS = [
+  { id: 'all', nameEN: 'All Pakistan', nameUR: 'پورا پاکستان', activeNodes: 28, threatLevel: 'ELEVATED' },
+  { id: 'isb', nameEN: 'Islamabad', nameUR: 'اسلام آباد', activeNodes: 4, threatLevel: 'MODERATE' },
+  { id: 'pun', nameEN: 'Punjab', nameUR: 'پنجاب', activeNodes: 12, threatLevel: 'CRITICAL' },
+  { id: 'snd', nameEN: 'Sindh', nameUR: 'سندھ', activeNodes: 8, threatLevel: 'HIGH' },
+  { id: 'kpk', nameEN: 'KPK', nameUR: 'خیبر پختونخوا', activeNodes: 3, threatLevel: 'LOW' },
+  { id: 'bal', nameEN: 'Balochistan', nameUR: 'بلوچستان', activeNodes: 1, threatLevel: 'STABLE' },
+  { id: 'ajk_gb', nameEN: 'AJK & GB', nameUR: 'آزاد کشمیر اور گلگت', activeNodes: 0, threatLevel: 'STABLE' },
+];
+
 export default function LandingScreen() {
   const navigation = useNavigation<NavProp>();
   const setRole = useAppStore((s) => s.setRole);
+
+  // Localization & Region State
+  const lang = useAppStore((s) => s.lang);
+  const setLang = useAppStore((s) => s.setLang);
+  const [selectedRegion, setSelectedRegion] = useState<'all' | 'isb' | 'pun' | 'snd' | 'kpk' | 'bal' | 'ajk_gb'>('isb'); // Default to Islamabad demo
 
   // Telemetry State
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
@@ -44,6 +110,7 @@ export default function LandingScreen() {
   const logoRotate = useRef(new Animated.Value(0)).current;
   const laserAnim = useRef(new Animated.Value(0)).current;
   const isOnlinePulse = useRef(new Animated.Value(1)).current;
+  const tickerTranslation = useRef(new Animated.Value(width)).current;
 
   // Interaction spring scales
   const citizenCardScale = useRef(new Animated.Value(1)).current;
@@ -205,6 +272,34 @@ export default function LandingScreen() {
     };
   }, []);
 
+  // Scrolling ticker loop
+  useEffect(() => {
+    tickerTranslation.setValue(width);
+    const anim = Animated.loop(
+      Animated.timing(tickerTranslation, {
+        toValue: -width - 400,
+        duration: 16000,
+        useNativeDriver: true,
+        isInteraction: false,
+      })
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [lang]);
+
+  // Dynamic telemetry calculations
+  const currentRegionData = REGIONS.find(r => r.id === selectedRegion);
+  const totalMockOtherRegions = REGIONS.filter(r => r.id !== 'isb').reduce((acc, r) => acc + r.activeNodes, 0);
+  const displayActiveNodes = selectedRegion === 'all'
+    ? (isOnline ? activeNodes + totalMockOtherRegions : totalMockOtherRegions)
+    : selectedRegion === 'isb' && isOnline
+      ? activeNodes
+      : (currentRegionData?.activeNodes ?? 0);
+
+  const displayThreatLevel = selectedRegion === 'isb' && isOnline
+    ? threatLevel
+    : (currentRegionData?.threatLevel ?? 'STABLE');
+
   const handleCitizen = () => {
     setRole('citizen');
     navigation.navigate('CitizenOnboarding');
@@ -257,9 +352,7 @@ export default function LandingScreen() {
       case 'STABLE': return Colors.primary;
       default: return '#94A3B8';
     }
-  };
-
-  return (
+  };  return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#020813" />
       
@@ -303,6 +396,19 @@ export default function LandingScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Top Header language selector */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            style={styles.langToggle}
+            onPress={() => setLang(lang === 'en' ? 'ur' : 'en')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.langToggleText}>
+              {lang === 'en' ? 'اردو' : 'English'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         
         {/* Holographic Radar Scanner Badge & Protective Shield */}
@@ -358,7 +464,34 @@ export default function LandingScreen() {
         {/* Title Deck */}
         <View style={styles.titleBlock}>
           <Text style={styles.appName}>CrisesMesh <Text style={styles.highlightText}>AI</Text></Text>
-          <Text style={styles.tagline}>Unified Crisis Command & Safety Portal</Text>
+          <Text style={styles.tagline}>{TRANSLATIONS[lang].subtitle}</Text>
+        </View>
+
+        {/* Region selector */}
+        <View style={styles.regionSelectorContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.regionScrollContent}>
+            {REGIONS.map((region) => {
+              const isSelected = selectedRegion === region.id;
+              return (
+                <TouchableOpacity
+                  key={region.id}
+                  style={[
+                    styles.regionPill,
+                    isSelected && styles.regionPillSelected
+                  ]}
+                  onPress={() => setSelectedRegion(region.id as any)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.regionPillText,
+                    isSelected && styles.regionPillTextSelected
+                  ]}>
+                    {lang === 'en' ? region.nameEN : region.nameUR}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {/* Real-time Tactical Heartbeat Widget (Dashboard Feel) */}
@@ -372,47 +505,56 @@ export default function LandingScreen() {
             >
               <View style={styles.heartbeatInner} />
             </Animated.View>
-            <Text style={styles.tacticalTitle}>ISLAMABAD CRISIS TELEMETRY</Text>
+            <Text style={styles.tacticalTitle}>
+              {`${(currentRegionData ? (lang === 'en' ? currentRegionData.nameEN : currentRegionData.nameUR) : 'PAKISTAN').toUpperCase()} EMERGENCY TELEMETRY`}
+            </Text>
           </View>
           
           <View style={styles.statsRow}>
             <View style={styles.statPill}>
-              <Text style={styles.statLabel}>Sync status</Text>
+              <Text style={styles.statLabel}>{TRANSLATIONS[lang].syncStatus}</Text>
               {isOnline === null ? (
                 <Animated.Text style={[styles.statVal, { color: Colors.warning, opacity: isOnlinePulse }]}>
-                  CONNECTING
+                  {TRANSLATIONS[lang].connecting}
                 </Animated.Text>
               ) : isOnline ? (
                 <Text style={[styles.statVal, { color: Colors.primary }]}>
-                  ONLINE
+                  {TRANSLATIONS[lang].online}
                 </Text>
               ) : (
                 <Animated.Text style={[styles.statVal, { color: Colors.danger, opacity: isOnlinePulse }]}>
-                  OFFLINE
+                  {TRANSLATIONS[lang].offline}
                 </Animated.Text>
               )}
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statPill}>
-              <Text style={styles.statLabel}>Active Signals</Text>
+              <Text style={styles.statLabel}>{TRANSLATIONS[lang].activeSignals}</Text>
               <Text style={styles.statVal}>
-                {isOnline ? `${activeNodes} NODES` : '--'}
+                {displayActiveNodes} NODES
               </Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statPill}>
-              <Text style={styles.statLabel}>Threat Index</Text>
-              <Text style={[styles.statVal, { color: getThreatColor(threatLevel) }]}>
-                {isOnline ? threatLevel : 'UNAVAILABLE'}
+              <Text style={styles.statLabel}>{TRANSLATIONS[lang].threatIndex}</Text>
+              <Text style={[styles.statVal, { color: getThreatColor(displayThreatLevel) }]}>
+                {displayThreatLevel}
               </Text>
             </View>
           </View>
         </View>
 
+        {/* Scrolling National Marquee Ticker */}
+        <View style={styles.tickerContainer}>
+          <Animated.View style={[styles.tickerWrapper, { transform: [{ translateX: tickerTranslation }] }]}>
+            <Text style={styles.tickerText}>{TRANSLATIONS[lang].nationalTicker}</Text>
+          </Animated.View>
+        </View>
+
         {/* Action Panel Divider */}
         <View style={styles.sectionDivider}>
           <View style={styles.lineSpacer} />
-          <Text style={styles.dividerLabel}>PORTAL SELECTION</Text>
+          <Text style={styles.dividerLabel}>{TRANSLATIONS[lang].portalSelection}</Text>
           <View style={styles.lineSpacer} />
         </View>
 
@@ -443,8 +585,8 @@ export default function LandingScreen() {
                     <Text style={styles.cardIcon}>👤</Text>
                   </View>
                   <View style={styles.cardMeta}>
-                    <Text style={styles.cardTitle}>Citizen Portal</Text>
-                    <Text style={styles.cardSub}>Report emergencies & navigate safety routes</Text>
+                    <Text style={styles.cardTitle}>{TRANSLATIONS[lang].citizenTitle}</Text>
+                    <Text style={styles.cardSub}>{TRANSLATIONS[lang].citizenSub}</Text>
                   </View>
                   <Text style={styles.cardArrow}>🡪</Text>
                 </View>
@@ -452,13 +594,13 @@ export default function LandingScreen() {
                 {/* In-Card Feature Pill list */}
                 <View style={styles.featurePillRow}>
                   <View style={[styles.miniPill, styles.pillEmerald]}>
-                    <Text style={styles.miniPillText}>🌊 Report Flood</Text>
+                    <Text style={styles.miniPillText}>{TRANSLATIONS[lang].citizenPill1}</Text>
                   </View>
                   <View style={[styles.miniPill, styles.pillEmerald]}>
-                    <Text style={styles.miniPillText}>🎙️ Voice Report</Text>
+                    <Text style={styles.miniPillText}>{TRANSLATIONS[lang].citizenPill2}</Text>
                   </View>
                   <View style={[styles.miniPill, styles.pillEmerald]}>
-                    <Text style={styles.miniPillText}>🗺️ Live Red Zone Map</Text>
+                    <Text style={styles.miniPillText}>{TRANSLATIONS[lang].citizenPill3}</Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -487,8 +629,8 @@ export default function LandingScreen() {
                     <Text style={styles.cardIcon}>🏛️</Text>
                   </View>
                   <View style={styles.cardMeta}>
-                    <Text style={styles.cardTitle}>Command Center</Text>
-                    <Text style={styles.cardSub}>🔒 Authorized emergency responders deck</Text>
+                    <Text style={styles.cardTitle}>{TRANSLATIONS[lang].govTitle}</Text>
+                    <Text style={styles.cardSub}>{TRANSLATIONS[lang].govSub}</Text>
                   </View>
                   <Text style={styles.cardArrow}>🡪</Text>
                 </View>
@@ -496,13 +638,13 @@ export default function LandingScreen() {
                 {/* In-Card Feature Pill list */}
                 <View style={styles.featurePillRow}>
                   <View style={[styles.miniPill, styles.pillSky]}>
-                    <Text style={styles.miniPillText}>⚡ Signal Fusion</Text>
+                    <Text style={styles.miniPillText}>{TRANSLATIONS[lang].govPill1}</Text>
                   </View>
                   <View style={[styles.miniPill, styles.pillSky]}>
-                    <Text style={styles.miniPillText}>🔄 Reroute Sim</Text>
+                    <Text style={styles.miniPillText}>{TRANSLATIONS[lang].govPill2}</Text>
                   </View>
                   <View style={[styles.miniPill, styles.pillSky]}>
-                    <Text style={styles.miniPillText}>🚨 Dispatch Control</Text>
+                    <Text style={styles.miniPillText}>{TRANSLATIONS[lang].govPill3}</Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -514,8 +656,8 @@ export default function LandingScreen() {
 
         {/* Premium footer */}
         <View style={styles.footerDeck}>
-          <Text style={styles.footerBrand}>🇵🇰 NATIONAL EMPOWERMENT SAFETY INITIATIVE</Text>
-          <Text style={styles.footerDetails}>CrisesMesh AI • Pakistan National Emergency Grid (Demo: Islamabad)</Text>
+          <Text style={styles.footerBrand}>{TRANSLATIONS[lang].footerBrand}</Text>
+          <Text style={styles.footerDetails}>{TRANSLATIONS[lang].footerGrid} (Demo: Islamabad)</Text>
         </View>
 
       </Animated.View>
@@ -541,10 +683,80 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xl,
   },
+  topHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: Spacing.xl,
+    marginTop: 15,
+    marginBottom: 5,
+  },
+  langToggle: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  langToggleText: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  regionSelectorContainer: {
+    width: '100%',
+    marginBottom: Spacing.md,
+    height: 38,
+  },
+  regionScrollContent: {
+    paddingHorizontal: Spacing.xl,
+    gap: 8,
+    alignItems: 'center',
+  },
+  regionPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  regionPillSelected: {
+    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    borderColor: '#10B981',
+  },
+  regionPillText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  regionPillTextSelected: {
+    color: '#10B981',
+    fontWeight: '800',
+  },
+  tickerContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(2, 8, 19, 0.8)',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+    paddingVertical: 6,
+    overflow: 'hidden',
+    marginBottom: Spacing.lg,
+  },
+  tickerWrapper: {
+    flexDirection: 'row',
+  },
+  tickerText: {
+    color: '#10B981',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   floatOrb: {
     position: 'absolute',
     borderRadius: 999,
-    filter: 'blur(60px)',
     opacity: 0.14,
     zIndex: 0,
   },
