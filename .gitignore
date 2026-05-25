@@ -30,3 +30,7 @@ __pycache__/
 # Media
 *.mp4
 
+# Automation scripts
+generate_voiceover.py
+generate_antigravity_voiceover.py
+
