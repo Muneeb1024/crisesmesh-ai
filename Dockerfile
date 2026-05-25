@@ -17,8 +17,8 @@ COPY backend/app ./app
 COPY mobile/dist ./app/static
 
 # Set environment variables
-ENV PORT=8080
-EXPOSE 8080
+ENV PORT=7860
+EXPOSE 7860
 
 # Command to run Uvicorn
 CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
