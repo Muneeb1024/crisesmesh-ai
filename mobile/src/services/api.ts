@@ -3,9 +3,23 @@
  * Connects mobile app to FastAPI backend.
  */
 
+import { Platform, NativeModules } from 'react-native';
+
 // Backend URL — change for production
 const API_BASE = 'https://muneeb785-crisesmesh-ai.hf.space'; // Production Hugging Face Space URL
-const LOCAL_IP = '192.168.100.15'; // Host computer IP on Local Wi-Fi
+
+const getLocalIp = () => {
+  const scriptURL = NativeModules.SourceCode?.scriptURL;
+  if (scriptURL) {
+    const matches = scriptURL.match(/^https?:\/\/([^:/]+)(:\d+)?/);
+    if (matches && matches[1]) {
+      return matches[1];
+    }
+  }
+  return '192.168.100.15'; // Fallback to original local IP
+};
+
+const LOCAL_IP = getLocalIp();
 const API_BASE_LOCAL = `http://${LOCAL_IP}:8000`; // Local development URL for mobile
 
 const getApiBaseWeb = () => {
@@ -24,7 +38,6 @@ const API_BASE_WEB = getApiBaseWeb();
 const API_V1 = '/api/v1';
 
 // Detect platform — use web URL for Expo web
-import { Platform } from 'react-native';
 export const BASE_URL = Platform.OS === 'web' 
   ? API_BASE_WEB 
   : (__DEV__ ? API_BASE_LOCAL : API_BASE);

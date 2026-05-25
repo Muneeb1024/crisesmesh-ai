@@ -1,7 +1,7 @@
 import os, shutil, subprocess
 
-src = r"E:\WORKSPACE\AI-SEEKHO-ANTIGRAVITY-HACKATHON\crisesmesh-ai"
-dest = r"E:\WORKSPACE\AI-SEEKHO-ANTIGRAVITY-HACKATHON\hf_deploy"
+src = os.path.dirname(os.path.abspath(__file__))
+dest = os.path.join(os.path.dirname(src), "hf_deploy")
 
 # Read HF token from environment variable
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
