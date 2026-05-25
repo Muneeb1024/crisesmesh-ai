@@ -7,9 +7,19 @@ sdk: docker
 pinned: false
 ---
 
-# CrisesMesh AI — Multi-Crisis Management Command Center for Pakistan
+# 🚨 CrisesMesh AI — Multi-Crisis Management Command Center for Pakistan
 
-A dual-interface mobile crisis management system that helps citizens report urban flooding and assists government responders in verifying signals, allocating resources, simulating actions, and coordinating alerts using multi-agent AI pipelines.
+<div align="center">
+
+[![FastAPI Backend](https://img.shields.io/badge/FastAPI-v0.110.0-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://muneeb785-crisesmesh-ai.hf.space)
+[![Hugging Face Space](https://img.shields.io/badge/Hugging%20Face-Space-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://muneeb785-crisesmesh-ai.hf.space)
+[![Expo EAS Build](https://img.shields.io/badge/Expo-EAS%20Build-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/accounts/muneeb785/projects/crisesmesh-ai/builds/d2e8b67f-e9be-4ad8-9931-34c29671183a)
+[![Gemini Engine](https://img.shields.io/badge/Gemini-Pro-8E44AD?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Dev Assistant](https://img.shields.io/badge/Google%20Antigravity-Verified-4285F4?style=for-the-badge&logo=google&logoColor=white)](#7-antigravity-development-time-evidence)
+
+A dual-interface mobile crisis management system designed for Pakistan's urban centers. It enables citizens to report urban flooding instantly and empowers government responders to verify crisis signals, auto-allocate rescue resources, simulate route optimizations, and coordinate public safety notifications using an advanced multi-agent AI pipeline.
+
+</div>
 
 ---
 
@@ -28,8 +38,8 @@ To experience the full capabilities of **CrisesMesh AI**, check out our project 
 
 The project has been fully built, packaged, and deployed to live production servers:
 
-* **Live Backend API**: `https://muneeb785-crisesmesh-ai.hf.space`
-* **Live Health Check**: [Health Status](https://muneeb785-crisesmesh-ai.hf.space/health)
+* **Live Backend API**: [https://muneeb785-crisesmesh-ai.hf.space](https://muneeb785-crisesmesh-ai.hf.space)
+* **Live Health Check**: [Health Status Endpoint](https://muneeb785-crisesmesh-ai.hf.space/health)
 * **Android APK Installation**: [Download Android APK via EAS](https://expo.dev/accounts/muneeb785/projects/crisesmesh-ai/builds/d2e8b67f-e9be-4ad8-9931-34c29671183a) (Scan the QR Code on your Android device to install the application instantly).
 
 ---
@@ -42,7 +52,7 @@ Pakistani cities face severe urban challenges, particularly during the monsoon s
 - **Limited resources**: Rescue teams, water pumps, and ambulances are allocated inefficiently.
 - **Coordination gap**: Public safety alerts are slow to reach affected populations, lacking localized, bilingual, and actionable instructions.
 
-**CrisesMesh AI** bridges this gap with an AI-agent-orchestrated, dual-interface mobile application, focusing its MVP on **Urban Flooding** in the twin cities of **Islamabad and Rawalpindi**.
+**CrisesMesh AI** bridges this gap with an AI-agent-orchestrated, dual-interface mobile application, focusing its MVP on **Urban Flooding** in the twin cities of **Islamabad and Rawalpindi** (particularly focusing on flood-prone zones like Nullah Lai, G-10 Underpass, and surrounding areas).
 
 ---
 
@@ -65,9 +75,72 @@ CrisesMesh AI provides a single dual-interface mobile application that caters to
 
 ---
 
-## 3. Key Features
+## 3. System Architecture
 
-### 3.1 Citizen Module
+```mermaid
+graph TD
+    %% Citizen & Sensor Inputs
+    subgraph Inputs ["Data Ingestion Streams"]
+        A1[Citizen Reports: English/Roman Urdu]
+        A2[Audio Voice Notes]
+        A3[Open-Meteo Live Rainfall Telemetry]
+        A4[Mock Water-Level Sensors]
+        A5[Mock Traffic Congestion Indexes]
+        A6[Emergency Call Frequency Spikes]
+        A7[Historical Flood Zone Maps]
+    end
+
+    %% Mobile App Frontend
+    subgraph Frontend ["React Native Expo Frontend"]
+        B1[Citizen App Dashboard]
+        B2[Interactive Safety Map: Mapbox/Leaflet]
+        B3[Bilingual Audio Warning Siren]
+        B4[Government Command Center PIN: 1122]
+    end
+
+    %% FastAPI Backend & Agents
+    subgraph Backend ["FastAPI Backend Space"]
+        C1[FastAPI REST Endpoints]
+        C2[InMemory Store / PostGIS fallback]
+        
+        subgraph Orchestrator ["ADK-Inspired Agent Orchestrator"]
+            D1[Signal Fusion Agent] --> D2[Vetting Agent]
+            D2 --> D3[Classification Agent]
+            D3 --> D4[Severity Agent]
+            D4 --> D5[Resource Allocation Agent]
+            D5 --> D6[Simulation Agent]
+            D6 --> D7[Translation Agent]
+            D7 --> D8[Notification Agent]
+            
+            %% Recovery agent run separately
+            D9[Recovery & Retraction Agent]
+        end
+    end
+
+    %% LLM & TTS
+    subgraph Services ["External Engines"]
+        E1[Gemini Pro LLM Client]
+        E2[Edge-TTS Neural Audio Service]
+    end
+
+    %% Connections
+    A1 & A2 & A3 & A4 & A5 & A6 & A7 -->|Ingest| C1
+    B1 & B2 -->|POST Report| C1
+    C1 -->|Route Request| Orchestrator
+    Orchestrator -->|Context Reasoning| E1
+    C1 -->|Generate Safety Audio| E2
+    E2 -->|Fetch Urdu Warning MP3| B3
+    D8 -->|Disseminate Live Warnings| B1
+    D9 -->|Retract Alerts & Adjust Resources| C1
+    C1 -->|Sync Incidents/Traces| C2
+    C2 -->|Reflect Status| B4
+```
+
+---
+
+## 4. Key Features
+
+### 4.1 Citizen Module
 - **Onboarding**: Simple name and phone registration (mocked for demo).
 - **Bilingual Form**: Accepts descriptions in English or Roman Urdu.
 - **Voice Transcription**: In-app recording of voice descriptions and transcription.
@@ -75,7 +148,7 @@ CrisesMesh AI provides a single dual-interface mobile application that caters to
 - **Emergency Warnings**: Local siren warning and audio alarm triggered when entering high-risk Mapbox Red Zones.
 - **Simulated Preview**: WhatsApp and SMS alert preview generated automatically for citizens.
 
-### 3.2 Government Command Center
+### 4.2 Government Command Center
 - **Command Access**: Secured demo PIN (`1122`) to access the Command Center.
 - **Visual Alert Map**: Interactive Leaflet maps highlighting active threat spheres and signal markers.
 - **Dynamic Prioritizer**: Automatically calculates severity index and priority rating from fused inputs.
@@ -85,7 +158,7 @@ CrisesMesh AI provides a single dual-interface mobile application that caters to
 - **Bilingual Notification Pipeline**: Seamless alert dissemination to the Citizen Module.
 - **Conflict & Reclassification**: Downgrades and retracts alerts if field reports contradict initial sensor data (e.g., local pipe burst instead of city-wide flooding).
 
-### 3.3 Scalable Multi-Crisis Command Structure
+### 4.3 Scalable Multi-Crisis Command Structure
 The Command Center features a scalable sidebar showcasing unified emergency management capability:
 - **Urban Flooding** (Fully Functional MVP)
 - **Traffic Blockage** (Future Module Placeholder)
@@ -99,7 +172,7 @@ Clicking on future modules displays a scalable roadmap message, proving architec
 
 ---
 
-## 4. Challenge Requirement Mapping
+## 5. Challenge Requirement Mapping
 
 | Hackathon Requirement | CrisesMesh AI Implementation |
 |---|---|
@@ -118,106 +191,106 @@ Clicking on future modules displays a scalable roadmap message, proving architec
 
 ---
 
-## 5. System Architecture
+## 6. Runtime Agent Workflow (9-Agent Architecture)
+
+CrisesMesh AI is orchestrated by an **8-Agent Sequential Pipeline** plus a standalone **Recovery Agent** to manage verifying, dispatches, alert publishing, and emergency retraction:
 
 ```text
-       ┌────────────────────────┐         ┌─────────────────────────┐
-       │     Citizen Module     │         │Government Command Center│
-       └───────────┬────────────┘         └────────────┬────────────┘
-                   │                                   │
-                   └─────────────────┬─────────────────┘
-                                     │ (HTTP REST / JSON)
-                                     ▼
-                        ┌─────────────────────────┐
-                        │     FastAPI Backend     │
-                        └────────────┬────────────┘
-                                     │
-                                     ▼
-                        ┌─────────────────────────┐
-                        │Google ADK Agent Pipeline│
-                        └────────────┬────────────┘
-                                     │
-          ┌──────────────────────────┼──────────────────────────┐
-          ▼                          ▼                          ▼
-┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
-│Signal Fusion Agt │       │Severity/Class Agt│       │Resource/Sim Agent│
-└──────────────────┘       └──────────────────┘       └──────────────────┘
-          │                          │                          │
-          └──────────────────────────┼──────────────────────────┘
-                                     │
-                                     ▼
-                        ┌─────────────────────────┐
-                        │      Gemini Engine      │
-                        └────────────┬────────────┘
-                                     │
-                                     ▼
-                        ┌─────────────────────────┐
-                        │  Supabase PostgreSQL    │
-                        │    (with PostGIS)       │
-                        └─────────────────────────┘
+Incoming Incident
+  │
+  ▼
+1. Signal Fusion Agent (Fuses 7 telemetry streams)
+  │
+  ▼
+2. Vetting Agent (Scores report reliability and verifies indicators)
+  │
+  ▼
+3. Classification Agent (Identifies crisis type & lists alternative hypotheses)
+  │
+  ▼
+4. Severity Agent (Predicts impact radius, duration, and peak impact time)
+  │
+  ▼
+5. Resource Allocation Agent (Assigns rescue teams, water pumps & ambulances)
+  │
+  ▼
+6. Simulation Agent (Calculates detour routing & secondary congestion ETAs)
+  │
+  ▼
+7. Translation Agent (Generates bilingual notifications in EN & Roman Urdu)
+  │
+  ▼
+8. Notification Agent (Structures target notices for rescue, hospital & public channels)
+  │
+  ▼
+Public Alert Approved by Command Center ──► Alerts broadcasted to Citizen Apps
+  │
+  ▼
+9. Recovery Agent (Monitors field officer reports to trigger retractions & reclassifications)
 ```
 
-- **Frontend**: React Native, Expo, NativeWind CSS.
-- **Backend Services**: FastAPI, Python.
-- **Reasoning**: Gemini API via Google ADK-inspired workflows.
-- **Storage**: Supabase PostgreSQL / in-memory MVP store fallback.
-- **Dev-Time Orchestrator**: Google Antigravity.
+### 6.1 Agent Specifications
+
+#### 1. Signal Fusion Agent (`signal_fusion.py`)
+- **Input**: 7 raw streams (Citizen descriptions, Open-Meteo Live Rainfall, Traffic Congestion, Water Hydro-sensors, Emergency Call logs, Historical maps, Field Officer reports).
+- **Responsibility**: Correlates dates/times, deduplicates repetitive user reports, matches geo-coordinates, and fuses data.
+- **Output**: Fused Incident Candidate JSON containing the signal agreement index and spatial centroids.
+
+#### 2. Vetting Agent (`vetting.py`)
+- **Input**: Fused Incident Candidate + raw signals.
+- **Responsibility**: Checks if citizen-reported descriptions align with sensor readouts and live weather data.
+- **Output**: Confidence score (0.00 to 1.00) and indicator audit flags.
+
+#### 3. Classification Agent (`classification.py`)
+- **Input**: Vetted Incident Candidate.
+- **Responsibility**: Identifies the primary category of crisis (e.g. *Urban Flooding*).
+- **Output**: Primary Classification, alternative hypotheses, and classification confidence logs.
+
+#### 4. Severity Agent (`severity.py`)
+- **Input**: Classified Incident & Open-Meteo Weather telemetry.
+- **Responsibility**: Estimates the scale of the emergency.
+- **Output**: Severity Level (*Critical*, *High*, *Medium*, *Low*), affected radius (in meters), estimated population at risk, expected duration (in hours), and peak impact time.
+
+#### 5. Resource Allocation Agent (`resource_allocation.py`)
+- **Input**: Incident Details, Priority Score, and resource database schemas.
+- **Responsibility**: Allocates rescue squads, water pumps, ambulances, and police units efficiently.
+- **Output**: Recommended dispatch assets, along with reasoning logs highlighting trade-offs (e.g., matching capacity to the threat radius).
+
+#### 6. Simulation Agent (`simulation.py`)
+- **Input**: Incident coordinates, unsafe route vectors, Mapbox spatial routing datasets.
+- **Responsibility**: Runs dispatch route simulation. Compare normal paths to safe detour paths avoiding the flooded zone.
+- **Output**: Unsafe route ETA, safe route ETA, percent travel time change, and secondary road congestion impact factors.
+
+#### 7. Translation Agent (`translation.py`)
+- **Input**: Fused and analyzed crisis data.
+- **Responsibility**: Dynamically translates notifications to guarantee clear instructions reach the public in English and Roman Urdu.
+- **Output**: Translated message strings.
+
+#### 8. Notification Agent (`notification.py`)
+- **Input**: English/Urdu translation strings.
+- **Responsibility**: Formulates targeted alert payloads.
+- **Output**: Four customized notifications: Public Safety Notice, Rescue Briefing, Hospital Alert, and Utility Provider warning.
+
+#### 9. Recovery Agent (`recovery.py`)
+- **Input**: Field officer report overrides (e.g., "The flooding is actually a local water-main burst, not rain-driven").
+- **Responsibility**: Identifies conflicts, triggers incident downgrade, corrects resource allocation, and drafts public retractions.
+- **Output**: Retraction Alert payload, corrected classification, and downgraded resource recommendations.
 
 ---
 
-## 6. Antigravity Usage
+## 7. Antigravity Development-Time Evidence
 
-**Google Antigravity** has been used as a development-time agentic orchestration environment to plan, generate code, test, debug, and document the entire application.
+During the development of **CrisesMesh AI**, **Google Antigravity** served as our autonomous engineering assistant. It handled file creation, linting fixes, dependency resolution, video voiceover editing, and live deployment.
 
-Development evidence is fully saved inside `antigravity-evidence/`:
-- **`traces/`**: Planning and code execution records.
-- **`screenshots/`**: Visual evidence of working screens.
-- **`prompts/`**: Copy-paste-ready sequence prompts.
-- **`generated-artifacts/`**: System logs and outputs.
-- **`test-logs/`**: Integration test results.
-- **`demo-recordings/`**: Automated webp video logs showing working user flows.
+All traces, logs, and screenshots are preserved under `antigravity-evidence/`:
+* **`traces/`**: Chronological plan executions detailing how the FastAPI backend and Expo app was written and debugged.
+* **`screenshots/`**: High-quality visual evidence of UI screens, command center panels, and mobile modules.
+* **`prompts/`**: Reusable system instructions for AI pipelines.
+* **`test-logs/`**: System test output logs verifying health check and routing APIs.
+* **`demo-recordings/`**: Automated webp video logs showing working user flows.
 
 > [!NOTE]
-> Antigravity serves as the core development environment. Production runtime decision-making is handled autonomously by the FastAPI backend, custom agents, and the Gemini API.
-
----
-
-## 7. Runtime Agent Workflow
-
-### 7.1 Signal Fusion Agent
-- **Input**: 7 raw signal streams (Citizen reports, Sensor data, Open-Meteo weather, etc.).
-- **Responsibility**: De-duplicates signals, detects data conflicts, calculates source credibility.
-- **Output**: Unified Incident Candidate, Signal Agreement Index (0-100), Geo-Confidence.
-
-### 7.2 Classification Agent
-- **Input**: Fused Incident Candidate.
-- **Responsibility**: Categorizes crisis category.
-- **Output**: Incident Type (e.g. *Urban Flooding*), Alternative Hypotheses, Reasoning Logs.
-
-### 7.3 Severity Agent
-- **Input**: Classified Incident & Weather data.
-- **Responsibility**: Predicts current and future impact scopes.
-- **Output**: Severity Level (*Critical*), Affected Radius (1.2km), Impacted Population (~15,000), Expected Duration, Peak Impact.
-
-### 7.4 Resource Allocation Agent
-- **Input**: Incident Details, Priority Score, Resource Database.
-- **Responsibility**: Optimizes responder dispatch to maximize rescue efficiency.
-- **Output**: Recommended Rescue Teams, Ambulances, Police Squads, Water-Pumps with trade-off logs.
-
-### 7.5 Simulation Agent
-- **Input**: Incident location, unsafe routes, alternate route traffic.
-- **Responsibility**: Evaluates the impact of rerouting first responders around high-risk sectors.
-- **Output**: Safe route waypoints, travel time comparison, secondary traffic impact factor.
-
-### 7.6 Notification Agent
-- **Input**: Approved alert configuration.
-- **Responsibility**: Automatically drafts bilingual messages for public broadcasts and specialized messages for external emergency stakeholders.
-- **Output**: Public Alerts (English + Roman Urdu), Hospital Advisories, Utility Alerts.
-
-### 7.7 Recovery Agent
-- **Input**: Field verification reports.
-- **Responsibility**: Re-evaluates incidents when telemetry and field feedback conflict.
-- **Output**: Reclassified incident category, public alerts retraction instructions, resource adjustments.
+> Antigravity is strictly a development-time environment orchestrator. All runtime decisions in production are handled by FastAPI, custom Python agents, and the Gemini API.
 
 ---
 
@@ -263,6 +336,7 @@ The end-to-end hackathon demonstration follows a realistic crisis scenario in Is
 | **Maps** | Leaflet.js HTML overlay via WebViews |
 | **Backend** | FastAPI, Python (Uvicorn) |
 | **AI Framework** | Google ADK / Gemini API |
+| **Audio Services** | Edge-TTS (Microsoft Neural Voices - `en-US-BrianNeural`) |
 | **Database** | Supabase / Thread-safe In-Memory fallback |
 | **Telemetry** | Open-Meteo Weather APIs |
 
@@ -300,7 +374,7 @@ The system includes pre-configured database structures (seed scripts available i
 
 ### 13.1 Prerequisites
 - **Node.js**: v18+
-- **Python**: v3.11 or v3.14 (with prebuilt Pydantic wheels)
+- **Python**: v3.11+
 - **Package Manager**: npm
 
 ### 13.2 Backend Setup
@@ -315,7 +389,7 @@ The system includes pre-configured database structures (seed scripts available i
    ```
 3. Install required dependencies:
    ```bash
-   .venv\Scripts\pip install fastapi uvicorn[standard] pydantic pydantic-settings python-dotenv python-multipart httpx
+   .venv\Scripts\pip install fastapi uvicorn[standard] pydantic pydantic-settings python-dotenv python-multipart httpx edge-tts
    ```
 4. Copy environment configuration:
    ```bash
@@ -430,4 +504,5 @@ Below is the verified end-to-end flow recorded during development:
 ---
 
 ## 19. Final Pitch
+
 **CrisesMesh AI** demonstrates how modern cities can transition from fragmented, reactive disaster handling to proactive, coordinated, and AI-supported crisis command. By unifying citizen telemetry with advanced reasoning agents, CrisesMesh AI saves critical minutes when every second counts.
